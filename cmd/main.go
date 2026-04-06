@@ -1,7 +1,16 @@
 package main
 
-import "fmt"
+import (
+	"net/http"
+	"os"
+)
 
 func main() {
-	fmt.Println("let drb99 do the thing")
+	addr := os.Getenv("DRB99_ADDR")
+	if addr == "" {
+		addr = ":8088"
+	}
+
+	mux := http.NewServeMux()
+	http.ListenAndServe(addr, mux)
 }

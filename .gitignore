@@ -1,0 +1,9 @@
+Session.vim
+test
+*.test
+test.go
+.env
+manhunt
+
+# Binary
+dist/

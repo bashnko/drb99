@@ -4,6 +4,8 @@ test
 test.go
 .env
 manhunt
+loops
+tabby
 
 # Binary
 dist/

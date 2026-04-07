@@ -1,4 +1,4 @@
-package services
+package service
 
 type GenerateRequest struct {
 	RepoURL    string            `json:"repo_url"`

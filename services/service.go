@@ -1,18 +1,127 @@
 package service
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"sort"
+	"strings"
+
+	gh "github.com/bashnko/drb99/github"
+	"github.com/bashnko/drb99/utils"
+)
 
 type Generator interface {
-	Generate(wrapperConfig) (map[string]string, error)
+	Generate(WrapperConfig) (map[string]string, error)
 }
 
 type GithubClient interface {
-	LatestRelease(ctx context.Context)
-	ReleaseByTag(ctx context.Context)
-	AssetExistByUrl(ctx context.Context)
+	LatestRelease(ctx context.Context, owner, repo string) (gh.Release, error)
+	ReleaseByTag(ctx context.Context, owner, repo, tag string) (gh.Release, error)
+	AssetExistByUrl(ctx context.Context, assetURL string) (bool, error)
 }
 
 type Service struct {
 	gh  GithubClient
 	gen Generator
+}
+
+func New(ghClient GithubClient, gen Generator) *Service {
+	return &Service{gh: ghClient, gen: gen}
+}
+
+func (s *Service) Generate(ctx context.Context, req GenerateRequest) (GenerateResponse, error) {
+	if normalizedFeatures(req.Features).isEmpty() {
+		return GenerateResponse{}, fmt.Errorf("at least one feature must be enabled")
+	}
+
+	cfg, err := s.prepareConfig(ctx, req)
+	if err != nil {
+		return GenerateResponse{}, err
+	}
+
+	files, err := s.gen.Generate(cfg)
+	if err != nil {
+		return GenerateResponse{}, err
+	}
+	return GenerateResponse{Files: files}, nil
+}
+
+func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (WrapperConfig, error) {
+	features := normalizedFeatures(req.Features)
+	if features.isEmpty() {
+		return WrapperConfig{}, fmt.Errorf("at least one feature must be enabled")
+	}
+	owner, repo, err := utils.ParseGithubRepo(req.RepoURL)
+	if err != nil {
+		return WrapperConfig{}, err
+	}
+	if strings.TrimSpace(req.BinaryName) == "" {
+		return WrapperConfig{}, fmt.Errorf("binary_name is required")
+	}
+	if len(req.Platform) == 0 {
+		return WrapperConfig{}, fmt.Errorf("Platforms  must not be empty")
+	}
+
+	mode := strings.ToLower(strings.TrimSpace(req.Mode))
+	if mode != "auto" && mode != "manual" {
+		return WrapperConfig{}, fmt.Errorf("mode must be either auto or manual")
+	}
+
+	version := utils.EnsureVersionPrefix(strings.TrimSpace(req.Version))
+	if mode == "auto" && version == "" {
+		release, err := s.gh.LatestRelease(ctx, owner, repo)
+		if err != nil {
+			return WrapperConfig{}, fmt.Errorf("resolve latest release version: %w", err)
+		}
+		version = release.TagName
+		if strings.TrimSpace(version) == "" {
+			return WrapperConfig{}, fmt.Errorf("latest release has empty tag name")
+		}
+	}
+	if version == "" {
+		return WrapperConfig{}, fmt.Errorf("version is required")
+	}
+
+	assets, err := s.resolveAssets(ctx, mode, owner, repo, strings.TrimSpace(req.BinaryName), version, req.Platform, req.AssetURLs, features)
+	if err != nil {
+		return WrapperConfig{}, err
+	}
+	sort.Slice(assets, func(i, j int) bool {
+		return assets[i].NodeKey < assets[j].NodeKey
+	})
+	return WrapperConfig{
+		RepoURL:     req.RepoURL,
+		Owner:       owner,
+		Repo:        repo,
+		BinaryName:  strings.TrimSpace(req.BinaryName),
+		Version:     version,
+		NPMVersion:  utils.NPMVersion(version),
+		PackageName: strings.ToLower(strings.TrimSpace(req.BinaryName)) + "-npm",
+		Features:    features,
+	}, nil
+}
+
+// assets remaining to handle (types and etc)
+// func (s *Service) resolveAssets(){}
+
+func normalizedFeatures(features *Features) Features {
+	if features == nil {
+		return Features{NPMWrapper: true}
+	}
+	return *features
+}
+
+func (f Features) isEmpty() bool {
+	return !f.NPMWrapper && !f.GoRealeser && !f.GithubActions
+}
+
+func archiveTypeForPlatform(features Features, platform string) string {
+	if features.GoRealeser {
+		if platform == "window-amd64" {
+			return "zip"
+			// todo: figure out .exe drb for holy windows users :)
+		}
+		return "binary"
+	}
+	return "binary"
 }

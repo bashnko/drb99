@@ -15,3 +15,17 @@ type Features struct {
 	GoRealeser    bool `json:"go_releaser"`
 	GithubActions bool `json:"github_actions"`
 }
+type WrapperConfig struct {
+	RepoURL     string
+	Owner       string
+	Repo        string
+	BinaryName  string
+	Version     string
+	NPMVersion  string
+	PackageName string
+	Features    Features
+}
+
+type GenerateResponse struct {
+	Files map[string]string `json:"files"`
+}

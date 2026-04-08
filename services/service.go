@@ -98,11 +98,64 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 		NPMVersion:  utils.NPMVersion(version),
 		PackageName: strings.ToLower(strings.TrimSpace(req.BinaryName)) + "-npm",
 		Features:    features,
+		Platform:    assets,
 	}, nil
 }
 
-// assets remaining to handle (types and etc)
-// func (s *Service) resolveAssets(){}
+func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, BinaryName, version string, platform []string, manualURL map[string]string, features Features) ([]PlatformAsset, error) {
+	assets := make([]PlatformAsset, 0, len(platform))
+	usedNode := map[string]bool{}
+	for _, platform := range platform {
+		spec, err := utils.ResolvePlatformSpec(platform)
+		if err != nil {
+			return nil, err
+		}
+		NodeKey := utils.NodeKey(spec)
+		if usedNode[NodeKey] {
+			return nil, fmt.Errorf("duplicate platform mapping for node target: %s", NodeKey)
+		}
+		usedNode[NodeKey] = true
+
+		archiveType := archiveTypeForPlatform(features, platform)
+		binaryFile := utils.ReleaseAssetName(BinaryName, version, spec, archiveType)
+		asset := PlatformAsset{
+			NodeKey:    NodeKey,
+			Inputkey:   platform,
+			GoSuffix:   spec.GoSuffix,
+			BinaryFile: binaryFile,
+			Archive:    archiveType,
+		}
+
+		switch mode {
+		case "manual":
+			if len(manualURL) == 0 {
+				return nil, fmt.Errorf("asset urls is required in manual mode")
+			}
+			url := strings.TrimSpace(manualURL[platform])
+			if url == "" {
+				url = strings.TrimSpace(manualURL[NodeKey])
+			}
+			if url == "" {
+				return nil, fmt.Errorf("missing manual asset URL for platform %s", platform)
+			}
+			asset.URL = url
+		case "auto":
+			url := gh.BuildReleaseAssetURL(owner, repo, version, binaryFile)
+			exists, err := s.gh.AssetExistByUrl(ctx, url)
+			if err != nil {
+				return nil, fmt.Errorf("validate release asset for %s: %w", platform, err)
+			}
+			if !exists {
+				return nil, fmt.Errorf("missing release asset for %s (%s)", platform, binaryFile)
+			}
+			asset.URL = url
+		default:
+			return nil, fmt.Errorf("unsopported mode: %s", mode)
+		}
+		assets = append(assets, asset)
+	}
+	return assets, nil
+}
 
 func normalizedFeatures(features *Features) Features {
 	if features == nil {

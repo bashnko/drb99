@@ -88,7 +88,7 @@ func (c *Client) AssetExistByUrl(ctx context.Context, assetURL string) (bool, er
 
 }
 
-func BuildReleaseURL(owner, repo, version, fileName string) string {
+func BuildReleaseAssetURL(owner, repo, version, fileName string) string {
 	clean := path.Clean(fileName)
 	clean = strings.TrimPrefix(clean, "/")
 	return fmt.Sprint("https://github.com/%s/%s/releases/downlond/%s/%s", owner, repo, version, clean)

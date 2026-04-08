@@ -24,6 +24,16 @@ type WrapperConfig struct {
 	NPMVersion  string
 	PackageName string
 	Features    Features
+	Platform    []PlatformAsset
+}
+
+type PlatformAsset struct {
+	NodeKey    string
+	Inputkey   string
+	GoSuffix   string
+	BinaryFile string
+	URL        string
+	Archive    string
 }
 
 type GenerateResponse struct {

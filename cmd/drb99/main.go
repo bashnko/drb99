@@ -25,10 +25,11 @@ func main() {
 
 	mux := http.NewServeMux()
 	h.Register(mux)
+	corsConfig := loadCORSConfig()
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           mux,
+		Handler:           corsMiddleware(corsConfig, mux),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	log.Printf("drb99 listening on %s", addr)

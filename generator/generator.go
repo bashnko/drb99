@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"text/template"
 	"strings"
+	"text/template"
 
 	service "github.com/bashnko/drb99/services"
 )

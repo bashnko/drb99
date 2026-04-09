@@ -22,7 +22,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 }
 
 func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusMethodNotAllowed, "method not allowed")
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (h *Handler) handleGenerate(w http.ResponseWriter, r *http.Request) {

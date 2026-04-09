@@ -9,6 +9,10 @@ import (
 )
 
 func LoadDotEnv() {
+	if os.Getenv("FLY_APP_NAME") != "" || os.Getenv("FLY_MACHINE_ID") != "" {
+		return
+	}
+
 	paths := []string{envPath(".env"), envPath(filepath.Join("..", ".env"))}
 	for _, path := range paths {
 		if err := loadEnvFile(path); err == nil {

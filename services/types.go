@@ -2,17 +2,17 @@ package service
 
 type GenerateRequest struct {
 	RepoURL    string            `json:"repo_url"`
-	BinaryName string            `json:"binary_name "`
+	BinaryName string            `json:"binary_name"`
 	Version    string            `json:"version,omitempty"`
-	Platform   []string          `json:"platform"`
+	Platforms  []string          `json:"platforms"`
 	Mode       string            `json:"mode"`
 	Features   *Features         `json:"features,omitempty"`
-	AssetURLs  map[string]string `json:"asset_url,omitempty"`
+	AssetURLs  map[string]string `json:"asset_urls,omitempty"`
 }
 
 type Features struct {
 	NPMWrapper    bool `json:"npm_wrapper"`
-	GoRealeser    bool `json:"go_releaser"`
+	GoReleaser    bool `json:"goreleaser"`
 	GithubActions bool `json:"github_actions"`
 }
 type WrapperConfig struct {
@@ -24,12 +24,12 @@ type WrapperConfig struct {
 	NPMVersion  string
 	PackageName string
 	Features    Features
-	Platform    []PlatformAsset
+	Platforms   []PlatformAsset
 }
 
 type PlatformAsset struct {
 	NodeKey    string
-	Inputkey   string
+	InputKey   string
 	GoSuffix   string
 	BinaryFile string
 	URL        string

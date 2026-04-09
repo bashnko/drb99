@@ -62,8 +62,8 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 		return WrapperConfig{}, fmt.Errorf("binary_name is required")
 	}
 
-	if len(req.Platform) == 0 {
-		return WrapperConfig{}, fmt.Errorf("Platforms  must not be empty")
+	if len(req.Platforms) == 0 {
+		return WrapperConfig{}, fmt.Errorf("platforms must not be empty")
 	}
 
 	mode := strings.ToLower(strings.TrimSpace(req.Mode))
@@ -88,7 +88,7 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 		return WrapperConfig{}, fmt.Errorf("version is required")
 	}
 
-	assets, err := s.resolveAssets(ctx, mode, owner, repo, strings.TrimSpace(req.BinaryName), version, req.Platform, req.AssetURLs, features)
+	assets, err := s.resolveAssets(ctx, mode, owner, repo, strings.TrimSpace(req.BinaryName), version, req.Platforms, req.AssetURLs, features)
 	if err != nil {
 		return WrapperConfig{}, err
 	}
@@ -106,11 +106,11 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 		NPMVersion:  utils.NPMVersion(version),
 		PackageName: strings.ToLower(strings.TrimSpace(req.BinaryName)) + "-npm",
 		Features:    features,
-		Platform:    assets,
+		Platforms:   assets,
 	}, nil
 }
 
-func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, BinaryName, version string, platform []string, manualURL map[string]string, features Features) ([]PlatformAsset, error) {
+func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, binaryName, version string, platform []string, manualURL map[string]string, features Features) ([]PlatformAsset, error) {
 	assets := make([]PlatformAsset, 0, len(platform))
 	usedNode := map[string]bool{}
 	for _, platform := range platform {
@@ -125,10 +125,10 @@ func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, BinaryNa
 		usedNode[NodeKey] = true
 
 		archiveType := archiveTypeForPlatform(features, platform)
-		binaryFile := utils.ReleaseAssetName(BinaryName, version, spec, archiveType)
+		binaryFile := utils.ReleaseAssetName(binaryName, version, spec, archiveType)
 		asset := PlatformAsset{
 			NodeKey:    NodeKey,
-			Inputkey:   platform,
+			InputKey:   platform,
 			GoSuffix:   spec.GoSuffix,
 			BinaryFile: binaryFile,
 			Archive:    archiveType,
@@ -173,14 +173,13 @@ func normalizedFeatures(features *Features) Features {
 }
 
 func (f Features) isEmpty() bool {
-	return !f.NPMWrapper && !f.GoRealeser && !f.GithubActions
+	return !f.NPMWrapper && !f.GoReleaser && !f.GithubActions
 }
 
 func archiveTypeForPlatform(features Features, platform string) string {
-	if features.GoRealeser {
-		if platform == "window-amd64" {
+	if features.GoReleaser {
+		if platform == "windows-amd64" {
 			return "zip"
-			// todo: figure out .exe drb for holy windows users :)
 		}
 		return "binary"
 	}

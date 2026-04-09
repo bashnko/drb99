@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"html/template"
+	"text/template"
 	"strings"
 
 	service "github.com/bashnko/drb99/services"
@@ -43,12 +43,12 @@ func (g *Generator) Generate(cfg service.WrapperConfig) (map[string]string, erro
 		files["index.js"] = indexJS
 		files["README.md"] = readme
 	}
-	if cfg.Features.GoRealeser {
+	if cfg.Features.GoReleaser {
 		goreleaserYAML, err := renderTemplate(goreleaserTemplate, cfg)
 		if err != nil {
 			return nil, err
 		}
-		files[".gorealeaser.yml"] = goreleaserYAML
+		files[".goreleaser.yaml"] = goreleaserYAML
 	}
 	if cfg.Features.GithubActions {
 		files[".github/workflows/release.yml"] = strings.ReplaceAll(githubActionsTemplate, "__GITHUB_TOKEN__", "${{ secrets.GITHUB_TOKEN }}")

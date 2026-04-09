@@ -1,0 +1,14 @@
+# flyctl launch added from .gitignore
+**/Session.vim
+**/test
+**/*.test
+**/test.go
+**/.env
+**/manhunt
+**/loops
+**/tabby
+**/.direnv
+
+# Binary
+**/dist
+fly.toml

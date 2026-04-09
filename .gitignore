@@ -9,3 +9,5 @@ tabby
 
 # Binary
 dist/
+
+.direnv/*

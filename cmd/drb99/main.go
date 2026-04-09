@@ -9,10 +9,14 @@ import (
 	"github.com/bashnko/drb99/generator"
 	gh "github.com/bashnko/drb99/github"
 	"github.com/bashnko/drb99/handler"
+	"github.com/bashnko/drb99/internal/config"
+	"github.com/bashnko/drb99/internal/middleware"
 	service "github.com/bashnko/drb99/services"
 )
 
 func main() {
+	config.LoadDotEnv()
+
 	addr := os.Getenv("DRB99")
 	if addr == "" {
 		addr = ":8088"
@@ -25,11 +29,11 @@ func main() {
 
 	mux := http.NewServeMux()
 	h.Register(mux)
-	corsConfig := loadCORSConfig()
+	corsConfig := middleware.LoadCORSConfig()
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           corsMiddleware(corsConfig, mux),
+		Handler:           middleware.CORSMiddleware(corsConfig, mux),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	log.Printf("drb99 listening on %s", addr)

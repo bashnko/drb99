@@ -1,4 +1,4 @@
-package main
+package middleware
 
 import (
 	"net/http"
@@ -6,15 +6,15 @@ import (
 	"strings"
 )
 
-type corsConfig struct {
-	allowAll       bool
-	allowedOrigins map[string]struct{}
+type CORSConfig struct {
+	AllowAll       bool
+	AllowedOrigins map[string]struct{}
 }
 
-func loadCORSConfig() corsConfig {
+func LoadCORSConfig() CORSConfig {
 	value := strings.TrimSpace(os.Getenv("DRB99_CORS_ORIGINS"))
 	if value == "" || value == "*" {
-		return corsConfig{allowAll: true}
+		return CORSConfig{AllowAll: true}
 	}
 
 	allowed := make(map[string]struct{})
@@ -25,13 +25,13 @@ func loadCORSConfig() corsConfig {
 		}
 	}
 
-	return corsConfig{allowedOrigins: allowed}
+	return CORSConfig{AllowedOrigins: allowed}
 }
 
-func corsMiddleware(config corsConfig, next http.Handler) http.Handler {
+func CORSMiddleware(config CORSConfig, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := strings.TrimSpace(r.Header.Get("Origin"))
-		if origin != "" && (config.allowAll || config.isAllowed(origin)) {
+		if origin != "" && (config.AllowAll || config.isAllowed(origin)) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Add("Vary", "Origin")
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -48,7 +48,7 @@ func corsMiddleware(config corsConfig, next http.Handler) http.Handler {
 	})
 }
 
-func (c corsConfig) isAllowed(origin string) bool {
-	_, ok := c.allowedOrigins[origin]
+func (c CORSConfig) isAllowed(origin string) bool {
+	_, ok := c.AllowedOrigins[origin]
 	return ok
 }

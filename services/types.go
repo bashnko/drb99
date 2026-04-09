@@ -16,20 +16,23 @@ type Features struct {
 	GithubActions bool `json:"github_actions"`
 }
 type WrapperConfig struct {
-	RepoURL     string
-	Owner       string
-	Repo        string
-	BinaryName  string
-	Version     string
-	NPMVersion  string
-	PackageName string
-	Features    Features
-	Platforms   []PlatformAsset
+	RepoURL           string
+	Owner             string
+	Repo              string
+	BinaryName        string
+	Version           string
+	NPMVersion        string
+	PackageName       string
+	Features          Features
+	Platforms         []PlatformAsset
+	GoReleaserTargets []string
 }
 
 type PlatformAsset struct {
 	NodeKey    string
 	InputKey   string
+	GoOS       string
+	GoArch     string
 	GoSuffix   string
 	BinaryFile string
 	URL        string

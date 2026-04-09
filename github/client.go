@@ -31,12 +31,12 @@ func NewClient() *Client {
 }
 
 func (c *Client) LatestRelease(ctx context.Context, owner, repo string) (Release, error) {
-	endpoint := fmt.Sprintf("https://api.github.com/repos/%s/%s/release/latest", owner, repo)
+	endpoint := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
 	return c.fetchRelease(ctx, endpoint)
 }
 
 func (c *Client) ReleaseByTag(ctx context.Context, owner, repo, tag string) (Release, error) {
-	endpoint := fmt.Sprintf("https://api.github.com/repos/%s/%s/release/tags/%s", owner, repo, tag)
+	endpoint := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/tags/%s", owner, repo, tag)
 	return c.fetchRelease(ctx, endpoint)
 }
 
@@ -91,5 +91,5 @@ func (c *Client) AssetExistByUrl(ctx context.Context, assetURL string) (bool, er
 func BuildReleaseAssetURL(owner, repo, version, fileName string) string {
 	clean := path.Clean(fileName)
 	clean = strings.TrimPrefix(clean, "/")
-	return fmt.Sprint("https://github.com/%s/%s/releases/downlond/%s/%s", owner, repo, version, clean)
+	return fmt.Sprintf("https://github.com/%s/%s/releases/download/%s/%s", owner, repo, version, clean)
 }

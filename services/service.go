@@ -62,17 +62,24 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 		return WrapperConfig{}, fmt.Errorf("binary_name is required")
 	}
 
-	if len(req.Platforms) == 0 {
-		return WrapperConfig{}, fmt.Errorf("platforms must not be empty")
-	}
-
 	mode := strings.ToLower(strings.TrimSpace(req.Mode))
-	if mode != "auto" && mode != "manual" {
+	if features.NPMWrapper {
+		if mode != "auto" && mode != "manual" {
+			return WrapperConfig{}, fmt.Errorf("mode must be either auto or manual when npm_wrapper is enabled")
+		}
+	} else if mode != "" && mode != "auto" && mode != "manual" {
 		return WrapperConfig{}, fmt.Errorf("mode must be either auto or manual")
 	}
 
+	selectedPlatforms := req.Platforms
+	if len(selectedPlatforms) == 0 {
+		if features.NPMWrapper || features.GoReleaser {
+			selectedPlatforms = defaultPlatforms()
+		}
+	}
+
 	version := utils.EnsureVersionPrefix(strings.TrimSpace(req.Version))
-	if mode == "auto" && version == "" {
+	if features.NPMWrapper && mode == "auto" && version == "" {
 		release, err := s.gh.LatestRelease(ctx, owner, repo)
 		if err != nil {
 			return WrapperConfig{}, fmt.Errorf("resolve latest release version: %w", err)
@@ -84,55 +91,49 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 		}
 	}
 
-	if version == "" {
+	if features.NPMWrapper && version == "" {
 		return WrapperConfig{}, fmt.Errorf("version is required")
 	}
 
-	assets, err := s.resolveAssets(ctx, mode, owner, repo, strings.TrimSpace(req.BinaryName), version, req.Platforms, req.AssetURLs, features)
+	assets, err := buildPlatformAssets(strings.TrimSpace(req.BinaryName), version, selectedPlatforms, features)
 	if err != nil {
 		return WrapperConfig{}, err
+	}
+
+	if features.NPMWrapper {
+		assets, err = s.resolveAssets(ctx, mode, owner, repo, version, assets, req.AssetURLs)
+		if err != nil {
+			return WrapperConfig{}, err
+		}
 	}
 
 	sort.Slice(assets, func(i, j int) bool {
 		return assets[i].NodeKey < assets[j].NodeKey
 	})
 
+	goReleaserTargets := collectGoReleaserTargets(assets)
+
 	return WrapperConfig{
-		RepoURL:     req.RepoURL,
-		Owner:       owner,
-		Repo:        repo,
-		BinaryName:  strings.TrimSpace(req.BinaryName),
-		Version:     version,
-		NPMVersion:  utils.NPMVersion(version),
-		PackageName: strings.ToLower(strings.TrimSpace(req.BinaryName)) + "-npm",
-		Features:    features,
-		Platforms:   assets,
+		RepoURL:           req.RepoURL,
+		Owner:             owner,
+		Repo:              repo,
+		BinaryName:        strings.TrimSpace(req.BinaryName),
+		Version:           version,
+		NPMVersion:        utils.NPMVersion(version),
+		PackageName:       strings.ToLower(strings.TrimSpace(req.BinaryName)) + "-npm",
+		Features:          features,
+		Platforms:         assets,
+		GoReleaserTargets: goReleaserTargets,
 	}, nil
 }
 
-func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, binaryName, version string, platform []string, manualURL map[string]string, features Features) ([]PlatformAsset, error) {
-	assets := make([]PlatformAsset, 0, len(platform))
-	usedNode := map[string]bool{}
-	for _, platform := range platform {
-		spec, err := utils.ResolvePlatformSpec(platform)
-		if err != nil {
-			return nil, err
-		}
-		NodeKey := utils.NodeKey(spec)
-		if usedNode[NodeKey] {
-			return nil, fmt.Errorf("duplicate platform mapping for node target: %s", NodeKey)
-		}
-		usedNode[NodeKey] = true
+func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, version string, assets []PlatformAsset, manualURL map[string]string) ([]PlatformAsset, error) {
+	resolved := make([]PlatformAsset, len(assets))
+	copy(resolved, assets)
 
-		archiveType := archiveTypeForPlatform(features, platform)
-		binaryFile := utils.ReleaseAssetName(binaryName, version, spec, archiveType)
-		asset := PlatformAsset{
-			NodeKey:    NodeKey,
-			InputKey:   platform,
-			GoSuffix:   spec.GoSuffix,
-			BinaryFile: binaryFile,
-			Archive:    archiveType,
-		}
+	for i := range resolved {
+		platform := resolved[i].InputKey
+		binaryFile := resolved[i].BinaryFile
 
 		switch mode {
 		case "manual":
@@ -141,12 +142,12 @@ func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, binaryNa
 			}
 			url := strings.TrimSpace(manualURL[platform])
 			if url == "" {
-				url = strings.TrimSpace(manualURL[NodeKey])
+				url = strings.TrimSpace(manualURL[resolved[i].NodeKey])
 			}
 			if url == "" {
 				return nil, fmt.Errorf("missing manual asset URL for platform %s", platform)
 			}
-			asset.URL = url
+			resolved[i].URL = url
 		case "auto":
 			url := gh.BuildReleaseAssetURL(owner, repo, version, binaryFile)
 			exists, err := s.gh.AssetExistByUrl(ctx, url)
@@ -156,13 +157,73 @@ func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, binaryNa
 			if !exists {
 				return nil, fmt.Errorf("missing release asset for %s (%s)", platform, binaryFile)
 			}
-			asset.URL = url
+			resolved[i].URL = url
 		default:
-			return nil, fmt.Errorf("unsopported mode: %s", mode)
+			return nil, fmt.Errorf("unsupported mode: %s", mode)
 		}
+	}
+
+	return resolved, nil
+}
+
+func buildPlatformAssets(binaryName, version string, platforms []string, features Features) ([]PlatformAsset, error) {
+	assets := make([]PlatformAsset, 0, len(platforms))
+	usedNode := map[string]bool{}
+
+	for _, inputPlatform := range platforms {
+		spec, err := utils.ResolvePlatformSpec(inputPlatform)
+		if err != nil {
+			return nil, err
+		}
+
+		nodeKey := utils.NodeKey(spec)
+		if usedNode[nodeKey] {
+			return nil, fmt.Errorf("duplicate platform mapping for node target: %s", nodeKey)
+		}
+		usedNode[nodeKey] = true
+
+		archiveType := archiveTypeForPlatform(features, inputPlatform)
+		asset := PlatformAsset{
+			NodeKey:    nodeKey,
+			InputKey:   inputPlatform,
+			GoSuffix:   spec.GoSuffix,
+			GoOS:       spec.GoOS,
+			GoArch:     spec.GoArch,
+			BinaryFile: utils.ReleaseAssetName(binaryName, version, spec, archiveType),
+			Archive:    archiveType,
+		}
+
 		assets = append(assets, asset)
 	}
+
 	return assets, nil
+}
+
+func defaultPlatforms() []string {
+	platformSpecs := utils.SupportedPlatformSpecs()
+	platforms := make([]string, 0, len(platformSpecs))
+	for platform := range platformSpecs {
+		platforms = append(platforms, platform)
+	}
+	sort.Strings(platforms)
+	return platforms
+}
+
+func collectGoReleaserTargets(assets []PlatformAsset) []string {
+	targetSet := make(map[string]struct{}, len(assets))
+	for _, asset := range assets {
+		if asset.GoOS == "" || asset.GoArch == "" {
+			continue
+		}
+		targetSet[asset.GoOS+"_"+asset.GoArch] = struct{}{}
+	}
+
+	targets := make([]string, 0, len(targetSet))
+	for target := range targetSet {
+		targets = append(targets, target)
+	}
+	sort.Strings(targets)
+	return targets
 }
 
 func normalizedFeatures(features *Features) Features {

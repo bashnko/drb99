@@ -351,13 +351,10 @@ builds:
       - -X main.version={{ "{{" }} .Version {{ "}}" }}
       - -X main.commit={{ "{{" }} .Commit {{ "}}" }}
       - -X main.date={{ "{{" }} .Date {{ "}}" }}
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
+    targets:
+{{- range .GoReleaserTargets }}
+      - {{ . }}
+{{- end }}
 
 archives:
   - id: default

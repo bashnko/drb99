@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/bashnko/drb99/generator"
 	gh "github.com/bashnko/drb99/github"
 	"github.com/bashnko/drb99/handler"
 	service "github.com/bashnko/drb99/services"
@@ -14,11 +15,11 @@ import (
 func main() {
 	addr := os.Getenv("DRB99")
 	if addr == "" {
-		addr = ":8080"
+		addr = ":8088"
 	}
 
 	ghClient := gh.NewClient()
-	// genarotor to be done
+	gen := generator.New()
 	svc := service.New(ghClient, gen)
 	h := handler.New(svc)
 

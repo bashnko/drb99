@@ -18,7 +18,7 @@ func New(svc *service.Service) *Handler {
 
 func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc("/generate", h.handleGenerate)
-	mux.HandleFunc("/healt", h.handleHealth)
+	mux.HandleFunc("/health", h.handleHealth)
 }
 
 func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {

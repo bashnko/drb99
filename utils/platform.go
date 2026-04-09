@@ -21,7 +21,7 @@ var supportedPlatformSpec = map[string]PlatformSpec{
 	"windows-amd64": {InputKey: "windows-amd64", NodeOS: "win32", NodeArch: "win32", GoSuffix: "windows-amd64", Ext: "exe"},
 }
 
-func supportedPlatformSpecs() map[string]PlatformSpec {
+func SupportedPlatformSpecs() map[string]PlatformSpec {
 	copyMap := make(map[string]PlatformSpec, len(supportedPlatformSpec))
 	maps.Copy(copyMap, supportedPlatformSpec)
 	return copyMap

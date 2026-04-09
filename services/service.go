@@ -43,6 +43,7 @@ func (s *Service) Generate(ctx context.Context, req GenerateRequest) (GenerateRe
 	if err != nil {
 		return GenerateResponse{}, err
 	}
+
 	return GenerateResponse{Files: files}, nil
 }
 
@@ -51,13 +52,16 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 	if features.isEmpty() {
 		return WrapperConfig{}, fmt.Errorf("at least one feature must be enabled")
 	}
+
 	owner, repo, err := utils.ParseGithubRepo(req.RepoURL)
 	if err != nil {
 		return WrapperConfig{}, err
 	}
+
 	if strings.TrimSpace(req.BinaryName) == "" {
 		return WrapperConfig{}, fmt.Errorf("binary_name is required")
 	}
+
 	if len(req.Platform) == 0 {
 		return WrapperConfig{}, fmt.Errorf("Platforms  must not be empty")
 	}
@@ -73,11 +77,13 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 		if err != nil {
 			return WrapperConfig{}, fmt.Errorf("resolve latest release version: %w", err)
 		}
+
 		version = release.TagName
 		if strings.TrimSpace(version) == "" {
 			return WrapperConfig{}, fmt.Errorf("latest release has empty tag name")
 		}
 	}
+
 	if version == "" {
 		return WrapperConfig{}, fmt.Errorf("version is required")
 	}
@@ -86,9 +92,11 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 	if err != nil {
 		return WrapperConfig{}, err
 	}
+
 	sort.Slice(assets, func(i, j int) bool {
 		return assets[i].NodeKey < assets[j].NodeKey
 	})
+
 	return WrapperConfig{
 		RepoURL:     req.RepoURL,
 		Owner:       owner,

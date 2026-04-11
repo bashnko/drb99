@@ -1,0 +1,52 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: drb99
+    main: ./cmd/drb99/main.go
+    binary: drb99
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/bashnko/drb99/cmd.Version={{.Version}}
+
+archives:
+  - id: drb99
+    builds:
+      - drb99
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  github:
+    owner: bashnko
+    name: drb99
+  name_template: "DRB99 {{ .Version }}"
+  draft: false
+  prerelease: auto
+

@@ -237,12 +237,9 @@ func (f Features) isEmpty() bool {
 	return !f.NPMWrapper && !f.GoReleaser && !f.GithubActions
 }
 
-func archiveTypeForPlatform(features Features, platform string) string {
-	if features.GoReleaser {
-		if platform == "windows-amd64" {
-			return "zip"
-		}
-		return "tar.gz"
+func archiveTypeForPlatform(_ Features, platform string) string {
+	if platform == "windows-amd64" {
+		return "zip"
 	}
-	return "binary"
+	return "tar.gz"
 }

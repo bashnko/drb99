@@ -122,6 +122,49 @@ function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
+function extractTarGzEntry(archivePath, outputPath) {
+  const data = fs.readFileSync(archivePath);
+  let tarData;
+
+  try {
+    tarData = zlib.gunzipSync(data);
+  } catch (err) {
+    fail('Downloaded archive is not a valid tar.gz file.', err.message);
+  }
+
+  if (tarData.length < 512) {
+    fail('Downloaded archive is too small to be a valid tar file.');
+  }
+
+  let cursor = 0;
+
+  while (cursor + 512 <= tarData.length) {
+    const header = tarData.slice(cursor, cursor + 512);
+    if (header.every((byte) => byte === 0)) {
+      break;
+    }
+
+    const fileName = header.slice(0, 100).toString('utf8').replace(/\0.*$/, '');
+    const prefix = header.slice(345, 500).toString('utf8').replace(/\0.*$/, '');
+    const sizeField = header.slice(124, 136).toString('utf8').replace(/\0.*$/, '').trim();
+    const typeFlag = header[156];
+    const size = parseInt(sizeField || '0', 8);
+    const fullName = prefix ? prefix + '/' + fileName : fileName;
+
+    const entryStart = cursor + 512;
+    const entrySize = Number.isFinite(size) && size > 0 ? size : 0;
+
+    if (fullName && typeFlag !== 53 && !fullName.endsWith('/')) {
+      fs.writeFileSync(outputPath, tarData.slice(entryStart, entryStart + entrySize));
+      return;
+    }
+
+    cursor = entryStart + Math.ceil(entrySize / 512) * 512;
+  }
+
+  fail('Tar archive does not contain a usable binary.');
+}
+
 function extractZipEntry(zipPath, outputPath) {
   const data = fs.readFileSync(zipPath);
   const eocdSignature = 0x06054b50;
@@ -224,6 +267,9 @@ function download(url, destination, redirects = 0) {
         try {
           if (assets[platformKey].archive === 'zip') {
             extractZipEntry(tmpFile, destination);
+            fs.unlinkSync(tmpFile);
+          } else if (assets[platformKey].archive === 'tar.gz') {
+            extractTarGzEntry(tmpFile, destination);
             fs.unlinkSync(tmpFile);
           } else {
             fs.renameSync(tmpFile, destination);

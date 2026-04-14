@@ -242,7 +242,7 @@ func archiveTypeForPlatform(features Features, platform string) string {
 		if platform == "windows-amd64" {
 			return "zip"
 		}
-		return "binary"
+		return "tar.gz"
 	}
 	return "binary"
 }

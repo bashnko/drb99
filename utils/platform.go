@@ -46,6 +46,8 @@ func ReleaseAssetName(binaryName, version string, spec PlatformSpec, archive str
 	switch archive {
 	case "zip":
 		return base + ".zip"
+	case "tar.gz":
+		return base + ".tar.gz"
 	default:
 		return base + spec.Ext
 	}

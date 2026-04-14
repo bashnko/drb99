@@ -66,6 +66,9 @@ func (g *Generator) renderPackageJSON(cfg service.WrapperConfig) (string, error)
 		"bin": map[string]string{
 			cfg.BinaryName: "index.js",
 		},
+		"dependencies": map[string]string{
+			"tar": "^7.5.2",
+		},
 		"scripts": map[string]string{
 			"postinstall": "node install.js",
 		},
@@ -96,6 +99,7 @@ const installTemplate = `#!/usr/bin/env node
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const tar = require('tar');
 const zlib = require('zlib');
 
 const binaryName = {{ printf "%q" .BinaryName }};
@@ -114,7 +118,7 @@ const assets = {
 
 function fail(message, details) {
   const extra = details ? '\n' + details : '';
-  console.error('[esdrb] ' + message + extra);
+  console.error('[drb99] ' + message + extra);
   process.exit(1);
 }
 
@@ -122,47 +126,52 @@ function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-function extractTarGzEntry(archivePath, outputPath) {
-  const data = fs.readFileSync(archivePath);
-  let tarData;
+function findFirstFile(dir) {
+  const entries = fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
 
+  for (const entry of entries) {
+    const entryPath = path.join(dir, entry.name);
+    if (entry.isFile()) {
+      return entryPath;
+    }
+    if (entry.isDirectory()) {
+      const nested = findFirstFile(entryPath);
+      if (nested) {
+        return nested;
+      }
+    }
+  }
+
+  return null;
+}
+
+async function extractTarGzEntry(archivePath, outputPath) {
   try {
-    tarData = zlib.gunzipSync(data);
+    const extractDir = fs.mkdtempSync(path.join(targetDir, 'tar-'));
+    try {
+      await tar.x({
+        file: archivePath,
+        cwd: extractDir,
+        gzip: true,
+      });
+
+      const extracted = findFirstFile(extractDir);
+      if (!extracted) {
+        fail('Tar archive does not contain a usable binary.');
+      }
+
+      try {
+        fs.rmSync(outputPath, { force: true });
+      } catch (_) {
+      }
+
+      fs.renameSync(extracted, outputPath);
+    } finally {
+      fs.rmSync(extractDir, { recursive: true, force: true });
+    }
   } catch (err) {
-    fail('Downloaded archive is not a valid tar.gz file.', err.message);
+    fail('Unable to install downloaded tar.gz binary.', err.message);
   }
-
-  if (tarData.length < 512) {
-    fail('Downloaded archive is too small to be a valid tar file.');
-  }
-
-  let cursor = 0;
-
-  while (cursor + 512 <= tarData.length) {
-    const header = tarData.slice(cursor, cursor + 512);
-    if (header.every((byte) => byte === 0)) {
-      break;
-    }
-
-    const fileName = header.slice(0, 100).toString('utf8').replace(/\0.*$/, '');
-    const prefix = header.slice(345, 500).toString('utf8').replace(/\0.*$/, '');
-    const sizeField = header.slice(124, 136).toString('utf8').replace(/\0.*$/, '').trim();
-    const typeFlag = header[156];
-    const size = parseInt(sizeField || '0', 8);
-    const fullName = prefix ? prefix + '/' + fileName : fileName;
-
-    const entryStart = cursor + 512;
-    const entrySize = Number.isFinite(size) && size > 0 ? size : 0;
-
-    if (fullName && typeFlag !== 53 && !fullName.endsWith('/')) {
-      fs.writeFileSync(outputPath, tarData.slice(entryStart, entryStart + entrySize));
-      return;
-    }
-
-    cursor = entryStart + Math.ceil(entrySize / 512) * 512;
-  }
-
-  fail('Tar archive does not contain a usable binary.');
 }
 
 function extractZipEntry(zipPath, outputPath) {
@@ -263,13 +272,13 @@ function download(url, destination, redirects = 0) {
     res.pipe(file);
 
     file.on('finish', () => {
-      file.close(() => {
+      file.close(async () => {
         try {
           if (assets[platformKey].archive === 'zip') {
             extractZipEntry(tmpFile, destination);
             fs.unlinkSync(tmpFile);
           } else if (assets[platformKey].archive === 'tar.gz') {
-            extractTarGzEntry(tmpFile, destination);
+            await extractTarGzEntry(tmpFile, destination);
             fs.unlinkSync(tmpFile);
           } else {
             fs.renameSync(tmpFile, destination);
@@ -278,7 +287,7 @@ function download(url, destination, redirects = 0) {
           if (process.platform !== 'win32') {
             fs.chmodSync(destination, 0o755);
           }
-          console.log('[esdrb] Installed ' + binaryName + ' for ' + platformKey);
+          console.log('[drb99] Installed ' + binaryName + ' for ' + platformKey);
         } catch (err) {
           try {
             fs.unlinkSync(tmpFile);
@@ -329,14 +338,14 @@ const executable = process.platform === 'win32' ? binaryName + '.exe' : binaryNa
 const binaryPath = path.join(__dirname, 'bin', executable);
 
 if (!fs.existsSync(binaryPath)) {
-  console.error('[esdrb] Binary is missing. Reinstall the package to trigger postinstall.');
+  console.error('[drb99] Binary is missing. Reinstall the package to trigger postinstall.');
   process.exit(1);
 }
 
 const child = spawn(binaryPath, process.argv.slice(2), { stdio: 'inherit' });
 
 child.on('error', (err) => {
-  console.error('[esdrb] Failed to start binary:', err.message);
+  console.error('[drb99] Failed to start binary:', err.message);
   process.exit(1);
 });
 

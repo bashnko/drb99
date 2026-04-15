@@ -126,16 +126,20 @@ function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true });
 }
 
-function findFirstFile(dir) {
+function findBinaryFile(dir) {
+  const expectedNames = new Set([binaryName, binaryName + '.exe']);
   const entries = fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name));
 
   for (const entry of entries) {
     const entryPath = path.join(dir, entry.name);
     if (entry.isFile()) {
-      return entryPath;
+      if (expectedNames.has(entry.name)) {
+        return entryPath;
+      }
+      continue;
     }
     if (entry.isDirectory()) {
-      const nested = findFirstFile(entryPath);
+      const nested = findBinaryFile(entryPath);
       if (nested) {
         return nested;
       }
@@ -155,9 +159,9 @@ async function extractTarGzEntry(archivePath, outputPath) {
         gzip: true,
       });
 
-      const extracted = findFirstFile(extractDir);
+      const extracted = findBinaryFile(extractDir);
       if (!extracted) {
-        fail('Tar archive does not contain a usable binary.');
+        fail('Tar archive does not contain the expected binary: ' + binaryName);
       }
 
       try {

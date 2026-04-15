@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://i.postimg.cc/nhdrQY9Z/drb99.png" alt="drb99" width="350" height="350"" />
+  <img src="https://i.postimg.cc/nhdrQY9Z/drb99.png" alt="drb99" width="350"" />
   <p>Distribute your go code, painlessly! via multiple distribution channels.</p>
 
   <p>

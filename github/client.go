@@ -10,6 +10,23 @@ import (
 	"time"
 )
 
+type APIError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e APIError) Error() string {
+	if strings.TrimSpace(e.Message) == "" {
+		return fmt.Sprintf("github api returned status %d", e.StatusCode)
+	}
+	return fmt.Sprintf("github api returned status %d: %s", e.StatusCode, e.Message)
+}
+
+func IsNotFound(err error) bool {
+	apiErr, ok := err.(APIError)
+	return ok && apiErr.StatusCode == http.StatusNotFound
+}
+
 type Client struct {
 	httpClient *http.Client
 }
@@ -17,6 +34,22 @@ type Client struct {
 type Release struct {
 	TagName string         `json:"tag_name"`
 	Assets  []ReleasAssets `json:"assets"`
+}
+
+type Repository struct {
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	License     License   `json:"license"`
+	Owner       RepoOwner `json:"owner"`
+}
+
+type RepoOwner struct {
+	Login string `json:"login"`
+}
+
+type License struct {
+	SPDXID string `json:"spdx_id"`
+	Name   string `json:"name"`
 }
 
 type ReleasAssets struct {
@@ -40,6 +73,31 @@ func (c *Client) ReleaseByTag(ctx context.Context, owner, repo, tag string) (Rel
 	return c.fetchRelease(ctx, endpoint)
 }
 
+func (c *Client) Repository(ctx context.Context, owner, repo string) (Repository, error) {
+	endpoint := fmt.Sprintf("https://api.github.com/repos/%s/%s", owner, repo)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return Repository{}, err
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", "drb99/1.0")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return Repository{}, err
+	}
+
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return Repository{}, APIError{StatusCode: resp.StatusCode}
+	}
+	var out Repository
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return Repository{}, fmt.Errorf("decode github response: %w", err)
+	}
+	return out, nil
+}
+
 func (c *Client) fetchRelease(ctx context.Context, endpoint string) (Release, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
@@ -55,7 +113,7 @@ func (c *Client) fetchRelease(ctx context.Context, endpoint string) (Release, er
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return Release{}, fmt.Errorf("github api returned status %d", resp.StatusCode)
+		return Release{}, APIError{StatusCode: resp.StatusCode}
 	}
 	var out Release
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {

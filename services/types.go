@@ -3,7 +3,7 @@ package service
 type GenerateRequest struct {
 	RepoURL     string            `json:"repo_url"`
 	BinaryName  string            `json:"binary_name"`
-	PackageName string            `json:"package_name"`
+	PackageName string            `json:"package_name,omitempty"`
 	License     string            `json:"license,omitempty"`
 	Description string            `json:"description,omitempty"`
 	Version     string            `json:"version,omitempty"`
@@ -47,4 +47,26 @@ type PlatformAsset struct {
 
 type GenerateResponse struct {
 	Files map[string]string `json:"files"`
+}
+
+type PrefillRequest struct {
+	RepoURL string `json:"repo_url"`
+}
+
+type PrefillResponse struct {
+	RepoURL     string            `json:"repo_url"`
+	Owner       string            `json:"owner"`
+	Repo        string            `json:"repo"`
+	Name        string            `json:"name"`
+	Version     string            `json:"version,omitempty"`
+	Author      string            `json:"author"`
+	Description string            `json:"description,omitempty"`
+	License     string            `json:"license,omitempty"`
+	Assets      []ReleaseAsset    `json:"assets,omitempty"`
+	AssetURLs   map[string]string `json:"asset_urls,omitempty"`
+}
+
+type ReleaseAsset struct {
+	Name string `json:"name"`
+	URL  string `json:"url"`
 }

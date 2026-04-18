@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -24,6 +25,8 @@ type Service struct {
 	gh  GithubClient
 	gen Generator
 }
+
+var npmPackageNamePattern = regexp.MustCompile(`^(@[a-z0-9~][a-z0-9._~-]*/)?[a-z0-9~][a-z0-9._~-]*$`)
 
 func New(ghClient GithubClient, gen Generator) *Service {
 	return &Service{gh: ghClient, gen: gen}
@@ -60,6 +63,24 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 
 	if strings.TrimSpace(req.BinaryName) == "" {
 		return WrapperConfig{}, fmt.Errorf("binary_name is required")
+	}
+
+	packageName := strings.TrimSpace(req.PackageName)
+	license := strings.TrimSpace(req.License)
+	description := strings.TrimSpace(req.Description)
+	if features.NPMWrapper {
+		if packageName == "" {
+			return WrapperConfig{}, fmt.Errorf("package name is required when npm wrapper is enabled")
+		}
+		if err := validateNPMPackageName(packageName); err != nil {
+			return WrapperConfig{}, err
+		}
+		if license == "" {
+			license = "MIT"
+		}
+		if description == "" {
+			description = fmt.Sprintf("npm wrapper for %s", strings.TrimSpace(req.BinaryName))
+		}
 	}
 
 	mode := strings.ToLower(strings.TrimSpace(req.Mode))
@@ -120,11 +141,31 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 		BinaryName:        strings.TrimSpace(req.BinaryName),
 		Version:           version,
 		NPMVersion:        utils.NPMVersion(version),
-		PackageName:       strings.ToLower(strings.TrimSpace(req.BinaryName)) + "-npm",
+		PackageName:       packageName,
+		License:           license,
+		Description:       description,
+		Author:            owner,
 		Features:          features,
 		Platforms:         assets,
 		GoReleaserTargets: goReleaserTargets,
 	}, nil
+}
+
+func validateNPMPackageName(name string) error {
+	if len(name) > 214 {
+		return fmt.Errorf("package name must be 214 characters or less")
+	}
+	if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") {
+		return fmt.Errorf("package name cannot start with . or _")
+	}
+	if strings.Contains(name, " ") {
+		return fmt.Errorf("package name cannot contain spaces")
+	}
+
+	if !npmPackageNamePattern.MatchString(name) {
+		return fmt.Errorf("package name is invalid for npm")
+	}
+	return nil
 }
 
 func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, version string, assets []PlatformAsset, manualURL map[string]string) ([]PlatformAsset, error) {

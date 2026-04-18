@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -17,6 +18,7 @@ type Generator interface {
 type GithubClient interface {
 	LatestRelease(ctx context.Context, owner, repo string) (gh.Release, error)
 	ReleaseByTag(ctx context.Context, owner, repo, tag string) (gh.Release, error)
+	Repository(ctx context.Context, owner, repo string) (gh.Repository, error)
 	AssetExistByUrl(ctx context.Context, assetURL string) (bool, error)
 }
 
@@ -24,6 +26,8 @@ type Service struct {
 	gh  GithubClient
 	gen Generator
 }
+
+var npmPackageNamePattern = regexp.MustCompile(`^(@[a-z0-9~][a-z0-9._~-]*/)?[a-z0-9~][a-z0-9._~-]*$`)
 
 func New(ghClient GithubClient, gen Generator) *Service {
 	return &Service{gh: ghClient, gen: gen}
@@ -47,6 +51,58 @@ func (s *Service) Generate(ctx context.Context, req GenerateRequest) (GenerateRe
 	return GenerateResponse{Files: files}, nil
 }
 
+func (s *Service) Prefill(ctx context.Context, req PrefillRequest) (PrefillResponse, error) {
+	owner, repo, err := utils.ParseGithubRepo(req.RepoURL)
+	if err != nil {
+		return PrefillResponse{}, err
+	}
+
+	repository, err := s.gh.Repository(ctx, owner, repo)
+	if err != nil {
+		return PrefillResponse{}, fmt.Errorf("resolve repository metadata: %w", err)
+	}
+
+	resp := PrefillResponse{
+		RepoURL:     strings.TrimSpace(req.RepoURL),
+		Owner:       owner,
+		Repo:        repo,
+		Name:        strings.TrimSpace(repository.Name),
+		Author:      owner,
+		Description: strings.TrimSpace(repository.Description),
+		License:     preferredLicenseName(repository.License),
+		AssetURLs:   map[string]string{},
+	}
+
+	if strings.TrimSpace(repository.Owner.Login) != "" {
+		resp.Author = strings.TrimSpace(repository.Owner.Login)
+	}
+
+	release, err := s.gh.LatestRelease(ctx, owner, repo)
+	if err != nil {
+		if !gh.IsNotFound(err) {
+			return PrefillResponse{}, fmt.Errorf("resolve latest release version: %w", err)
+		}
+		return resp, nil
+	}
+
+	resp.Version = strings.TrimSpace(release.TagName)
+	for _, asset := range release.Assets {
+		assetName := strings.TrimSpace(asset.Name)
+		assetURL := strings.TrimSpace(asset.URL)
+		if assetName == "" || assetURL == "" {
+			continue
+		}
+		resp.Assets = append(resp.Assets, ReleaseAsset{Name: assetName, URL: assetURL})
+		resp.AssetURLs[assetName] = assetURL
+	}
+
+	if len(resp.AssetURLs) == 0 {
+		resp.AssetURLs = nil
+	}
+
+	return resp, nil
+}
+
 func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (WrapperConfig, error) {
 	features := normalizedFeatures(req.Features)
 	if features.isEmpty() {
@@ -60,6 +116,24 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 
 	if strings.TrimSpace(req.BinaryName) == "" {
 		return WrapperConfig{}, fmt.Errorf("binary_name is required")
+	}
+
+	packageName := strings.TrimSpace(req.PackageName)
+	license := strings.TrimSpace(req.License)
+	description := strings.TrimSpace(req.Description)
+	if features.NPMWrapper {
+		if packageName == "" {
+			return WrapperConfig{}, fmt.Errorf("package name is required when npm wrapper is enabled")
+		}
+		if err := validateNPMPackageName(packageName); err != nil {
+			return WrapperConfig{}, err
+		}
+		if license == "" {
+			license = "MIT"
+		}
+		if description == "" {
+			description = fmt.Sprintf("npm wrapper for %s", strings.TrimSpace(req.BinaryName))
+		}
 	}
 
 	mode := strings.ToLower(strings.TrimSpace(req.Mode))
@@ -120,11 +194,31 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 		BinaryName:        strings.TrimSpace(req.BinaryName),
 		Version:           version,
 		NPMVersion:        utils.NPMVersion(version),
-		PackageName:       strings.ToLower(strings.TrimSpace(req.BinaryName)) + "-npm",
+		PackageName:       packageName,
+		License:           license,
+		Description:       description,
+		Author:            owner,
 		Features:          features,
 		Platforms:         assets,
 		GoReleaserTargets: goReleaserTargets,
 	}, nil
+}
+
+func validateNPMPackageName(name string) error {
+	if len(name) > 214 {
+		return fmt.Errorf("package name must be 214 characters or less")
+	}
+	if strings.HasPrefix(name, ".") || strings.HasPrefix(name, "_") {
+		return fmt.Errorf("package name cannot start with . or _")
+	}
+	if strings.Contains(name, " ") {
+		return fmt.Errorf("package name cannot contain spaces")
+	}
+
+	if !npmPackageNamePattern.MatchString(name) {
+		return fmt.Errorf("package name is invalid for npm")
+	}
+	return nil
 }
 
 func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, version string, assets []PlatformAsset, manualURL map[string]string) ([]PlatformAsset, error) {
@@ -242,4 +336,11 @@ func archiveTypeForPlatform(_ Features, platform string) string {
 		return "zip"
 	}
 	return "tar.gz"
+}
+
+func preferredLicenseName(license gh.License) string {
+	if strings.TrimSpace(license.SPDXID) != "" && strings.TrimSpace(license.SPDXID) != "NOASSERTION" {
+		return strings.TrimSpace(license.SPDXID)
+	}
+	return strings.TrimSpace(license.Name)
 }

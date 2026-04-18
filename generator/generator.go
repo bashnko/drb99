@@ -3,7 +3,6 @@ package generator
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"strings"
 	"text/template"
 
@@ -61,8 +60,9 @@ func (g *Generator) renderPackageJSON(cfg service.WrapperConfig) (string, error)
 	pkg := map[string]any{
 		"name":        cfg.PackageName,
 		"version":     cfg.NPMVersion,
-		"description": fmt.Sprintf("npm wrapper for %s", cfg.BinaryName),
-		"license":     "MIT",
+		"description": cfg.Description,
+		"license":     cfg.License,
+		"author":      cfg.Author,
 		"bin": map[string]string{
 			cfg.BinaryName: "index.js",
 		},
@@ -346,7 +346,7 @@ if (!fs.existsSync(binaryPath)) {
   process.exit(1);
 }
 
-const child = spawn(binaryPath, process.argv.slice(2), { stdio: 'inherit' });
+const child = 1spawn(binaryPath, process.argv.slice(2), { stdio: 'inherit' });
 
 child.on('error', (err) => {
   console.error('[drb99] Failed to start binary:', err.message);

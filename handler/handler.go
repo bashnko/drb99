@@ -12,13 +12,23 @@ type Handler struct {
 	svc *service.Service
 }
 
+const (
+	apiVersionPrefix = "api/v1"
+	legacyGenerate   = "/generate"
+	legactyHealth    = "/health"
+	generate         = apiVersionPrefix + "/generate"
+	health           = apiVersionPrefix + "/health"
+)
+
 func New(svc *service.Service) *Handler {
 	return &Handler{svc: svc}
 }
 
 func (h *Handler) Register(mux *http.ServeMux) {
-	mux.HandleFunc("/generate", h.handleGenerate)
-	mux.HandleFunc("/health", h.handleHealth)
+	mux.HandleFunc(generate, h.handleGenerate)
+	mux.HandleFunc(health, h.handleHealth)
+	mux.HandleFunc(legacyGenerate, h.handleGenerate)
+	mux.HandleFunc(legactyHealth, h.handleHealth)
 }
 
 func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {

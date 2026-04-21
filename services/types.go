@@ -17,6 +17,7 @@ type Features struct {
 	NPMWrapper    bool `json:"npm_wrapper"`
 	GoReleaser    bool `json:"goreleaser"`
 	GithubActions bool `json:"github_actions"`
+	AUR           bool `json:"aur"`
 }
 type WrapperConfig struct {
 	RepoURL           string
@@ -25,6 +26,7 @@ type WrapperConfig struct {
 	BinaryName        string
 	Version           string
 	NPMVersion        string
+	AURVersion        string
 	PackageName       string
 	License           string
 	Description       string

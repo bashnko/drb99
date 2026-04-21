@@ -121,6 +121,7 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 	packageName := strings.TrimSpace(req.PackageName)
 	license := strings.TrimSpace(req.License)
 	description := strings.TrimSpace(req.Description)
+	binaryName := strings.TrimSpace(req.BinaryName)
 	if features.NPMWrapper {
 		if packageName == "" {
 			return WrapperConfig{}, fmt.Errorf("package name is required when npm wrapper is enabled")
@@ -132,7 +133,15 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 			license = "MIT"
 		}
 		if description == "" {
-			description = fmt.Sprintf("npm wrapper for %s", strings.TrimSpace(req.BinaryName))
+			description = fmt.Sprintf("npm wrapper for %s", binaryName)
+		}
+	}
+	if features.AUR {
+		if license == "" {
+			license = "MIT"
+		}
+		if description == "" {
+			description = fmt.Sprintf("%s CLI", binaryName)
 		}
 	}
 
@@ -165,8 +174,23 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 		}
 	}
 
+	if features.AUR && version == "" {
+		release, err := s.gh.LatestRelease(ctx, owner, repo)
+		if err != nil {
+			return WrapperConfig{}, fmt.Errorf("resolve latest version: %w", err)
+		}
+
+		version = strings.TrimSpace(release.TagName)
+		if version == "" {
+			return WrapperConfig{}, fmt.Errorf("latest release has empty tag name")
+		}
+	}
+
 	if features.NPMWrapper && version == "" {
 		return WrapperConfig{}, fmt.Errorf("version is required")
+	}
+	if features.AUR && version == "" {
+		return WrapperConfig{}, fmt.Errorf("version is required when aur is enabled")
 	}
 
 	assets, err := buildPlatformAssets(strings.TrimSpace(req.BinaryName), version, selectedPlatforms, features)
@@ -191,9 +215,10 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 		RepoURL:           req.RepoURL,
 		Owner:             owner,
 		Repo:              repo,
-		BinaryName:        strings.TrimSpace(req.BinaryName),
+		BinaryName:        binaryName,
 		Version:           version,
 		NPMVersion:        utils.NPMVersion(version),
+		AURVersion:        utils.NPMVersion(version),
 		PackageName:       packageName,
 		License:           license,
 		Description:       description,
@@ -328,7 +353,7 @@ func normalizedFeatures(features *Features) Features {
 }
 
 func (f Features) isEmpty() bool {
-	return !f.NPMWrapper && !f.GoReleaser && !f.GithubActions
+	return !f.NPMWrapper && !f.GoReleaser && !f.GithubActions && !f.AUR
 }
 
 func archiveTypeForPlatform(_ Features, platform string) string {

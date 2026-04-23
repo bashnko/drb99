@@ -1,16 +1,16 @@
 package service
 
 type GenerateRequest struct {
-	RepoURL     string            `json:"repo_url"`
-	BinaryName  string            `json:"binary_name"`
-	PackageName string            `json:"package_name,omitempty"`
-	License     string            `json:"license,omitempty"`
-	Description string            `json:"description,omitempty"`
-	Version     string            `json:"version,omitempty"`
-	Platforms   []string          `json:"platforms"`
-	Mode        string            `json:"mode"`
-	Features    *Features         `json:"features,omitempty"`
-	AssetURLs   map[string]string `json:"asset_urls,omitempty"`
+	RepoURL     string              `json:"repo_url"`
+	BinaryName  string              `json:"binary_name"`
+	PackageName string              `json:"package_name,omitempty"`
+	License     string              `json:"license,omitempty"`
+	Description string              `json:"description,omitempty"`
+	Version     string              `json:"version,omitempty"`
+	Platforms   []string            `json:"platforms"`
+	Mode        string              `json:"mode"`
+	Features    *Features           `json:"features,omitempty"`
+	AssetURLs   map[string][]string `json:"asset_urls,omitempty"`
 }
 
 type Features struct {
@@ -43,7 +43,7 @@ type PlatformAsset struct {
 	GoArch     string
 	GoSuffix   string
 	BinaryFile string
-	URL        string
+	URLs       []string
 	Archive    string
 }
 
@@ -56,16 +56,16 @@ type PrefillRequest struct {
 }
 
 type PrefillResponse struct {
-	RepoURL     string            `json:"repo_url"`
-	Owner       string            `json:"owner"`
-	Repo        string            `json:"repo"`
-	Name        string            `json:"name"`
-	Version     string            `json:"version,omitempty"`
-	Author      string            `json:"author"`
-	Description string            `json:"description,omitempty"`
-	License     string            `json:"license,omitempty"`
-	Assets      []ReleaseAsset    `json:"assets,omitempty"`
-	AssetURLs   map[string]string `json:"asset_urls,omitempty"`
+	RepoURL     string              `json:"repo_url"`
+	Owner       string              `json:"owner"`
+	Repo        string              `json:"repo"`
+	Name        string              `json:"name"`
+	Version     string              `json:"version,omitempty"`
+	Author      string              `json:"author"`
+	Description string              `json:"description,omitempty"`
+	License     string              `json:"license,omitempty"`
+	Assets      []ReleaseAsset      `json:"assets,omitempty"`
+	AssetURLs   map[string][]string `json:"asset_urls,omitempty"`
 }
 
 type ReleaseAsset struct {

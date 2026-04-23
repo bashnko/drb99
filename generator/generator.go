@@ -58,7 +58,7 @@ func (g *Generator) Generate(cfg service.WrapperConfig) (map[string]string, erro
 			return nil, err
 		}
 		files["PKGBUILD"] = pkgbuild
-		files[".github/workflows/aur.yaml"] = strings.ReplaceAll(aurWorkflowTemplate, "__GITHUB_TOKEN__", "${{ secrets.GITHUB_TOKEN }}")
+		files[".github/workflows/aur.yml"] = strings.ReplaceAll(aurWorkflowTemplate, "__GITHUB_TOKEN__", "${{ secrets.GITHUB_TOKEN }}")
 	}
 	return files, nil
 
@@ -117,7 +117,7 @@ const platformKey = process.platform + '-' + process.arch;
 const assets = {
 {{- range .Platforms }}
   {{ printf "%q" .NodeKey }}: {
-    url: {{ printf "%q" .URL }},
+    urls: [{{ range .URLs }}{{ printf "%q" . }},{{ end }}],
     fileName: {{ printf "%q" .BinaryFile }},
     archive: {{ printf "%q" .Archive }}
   },
@@ -182,7 +182,7 @@ async function extractTarGzEntry(archivePath, outputPath) {
       fs.rmSync(extractDir, { recursive: true, force: true });
     }
   } catch (err) {
-    fail('Unable to install downloaded tar.gz binary.', err.message);
+    throw err;
   }
 }
 
@@ -193,7 +193,7 @@ function extractZipEntry(zipPath, outputPath) {
   const localSignature = 0x04034b50;
 
   if (data.length < 22) {
-    fail('Downloaded archive is too small to be a valid zip file.');
+    throw new Error('Downloaded archive is too small to be a valid zip file.');
   }
 
   let eocdOffset = -1;
@@ -205,7 +205,7 @@ function extractZipEntry(zipPath, outputPath) {
   }
 
   if (eocdOffset === -1) {
-    fail('Downloaded archive is not a valid zip file.');
+    throw new Error('Downloaded archive is not a valid zip file.');
   }
 
   const centralDirectoryOffset = data.readUInt32LE(eocdOffset + 16);
@@ -215,7 +215,7 @@ function extractZipEntry(zipPath, outputPath) {
 
   for (let entry = 0; entry < totalEntries; entry += 1) {
     if (data.readUInt32LE(cursor) !== centralSignature) {
-      fail('Invalid zip central directory entry.');
+      throw new Error('Invalid zip central directory entry.');
     }
 
     const compressionMethod = data.readUInt16LE(cursor + 10);
@@ -240,11 +240,11 @@ function extractZipEntry(zipPath, outputPath) {
   }
 
   if (!selected) {
-    fail('Zip archive does not contain a usable binary.');
+    throw new Error('Zip archive does not contain a usable binary.');
   }
 
   if (data.readUInt32LE(selected.localHeaderOffset) !== localSignature) {
-    fail('Invalid zip local header.');
+    throw new Error('Invalid zip local header.');
   }
 
   const localNameLength = data.readUInt16LE(selected.localHeaderOffset + 26);
@@ -258,81 +258,112 @@ function extractZipEntry(zipPath, outputPath) {
   } else if (selected.compressionMethod === 8) {
     extracted = zlib.inflateRawSync(payload);
   } else {
-    fail('Unsupported zip compression method: ' + selected.compressionMethod);
+    throw new Error('Unsupported zip compression method: ' + selected.compressionMethod);
   }
 
   fs.writeFileSync(outputPath, extracted);
 }
 
 function download(url, destination, redirects = 0) {
-  if (redirects > 5) {
-    fail('Too many redirects while downloading binary.', url);
-  }
-
-  https.get(url, (res) => {
-    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-      return download(res.headers.location, destination, redirects + 1);
+  return new Promise((resolve, reject) => {
+    if (redirects > 5) {
+      reject(new Error('Too many redirects while downloading binary: ' + url));
+      return;
     }
 
-    if (res.statusCode !== 200) {
-      return fail('Failed to download release asset.', 'HTTP ' + res.statusCode + ' from ' + url);
-    }
-
-    const tmpFile = destination + '.tmp';
-    const file = fs.createWriteStream(tmpFile);
-
-    res.pipe(file);
-
-    file.on('finish', () => {
-      file.close(async () => {
-        try {
-          if (assets[platformKey].archive === 'zip') {
-            extractZipEntry(tmpFile, destination);
-            fs.unlinkSync(tmpFile);
-          } else if (assets[platformKey].archive === 'tar.gz') {
-            await extractTarGzEntry(tmpFile, destination);
-            fs.unlinkSync(tmpFile);
-          } else {
-            fs.renameSync(tmpFile, destination);
-          }
-
-          if (process.platform !== 'win32') {
-            fs.chmodSync(destination, 0o755);
-          }
-          console.log('[drb99] Installed ' + binaryName + ' for ' + platformKey);
-        } catch (err) {
-          try {
-            fs.unlinkSync(tmpFile);
-          } catch (_) {
-          }
-          fail('Unable to install downloaded binary.', err.message);
-        }
-      });
-    });
-
-    file.on('error', (err) => {
-      try {
-        fs.unlinkSync(tmpFile);
-      } catch (_) {
+    https.get(url, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return download(res.headers.location, destination, redirects + 1).then(resolve).catch(reject);
       }
-      fail('Unable to write downloaded binary.', err.message);
-    });
-  }).on('error', (err) => {
-    fail('Network failure while downloading binary.', err.message);
+
+      if (res.statusCode !== 200) {
+        reject(new Error('HTTP ' + res.statusCode + ' from ' + url));
+        return;
+      }
+
+      const tmpFile = destination + '.tmp';
+      const file = fs.createWriteStream(tmpFile);
+
+      res.pipe(file);
+
+      file.on('finish', () => {
+        file.close(async () => {
+          try {
+            if (assets[platformKey].archive === 'zip') {
+              extractZipEntry(tmpFile, destination);
+              fs.unlinkSync(tmpFile);
+            } else if (assets[platformKey].archive === 'tar.gz') {
+              await extractTarGzEntry(tmpFile, destination);
+              fs.unlinkSync(tmpFile);
+            } else {
+              fs.renameSync(tmpFile, destination);
+            }
+
+            if (process.platform !== 'win32') {
+              fs.chmodSync(destination, 0o755);
+            }
+            resolve();
+          } catch (err) {
+            try {
+              fs.unlinkSync(tmpFile);
+            } catch (_) {
+            }
+            reject(err);
+          }
+        });
+      });
+
+      file.on('error', (err) => {
+        try {
+          fs.unlinkSync(tmpFile);
+        } catch (_) {
+        }
+        reject(err);
+      });
+    }).on('error', reject);
   });
 }
 
-function main() {
+async function tryDownloadUrls(urls, destination, urlIndex = 0) {
+  if (urlIndex >= urls.length) {
+    throw new Error('All asset URLs failed. Tried: ' + urls.join(', '));
+  }
+
+  const url = urls[urlIndex];
+  try {
+    console.log('[drb99] Attempting to download from ' + (urlIndex + 1) + '/' + urls.length + ': ' + url);
+    await download(url, destination);
+    console.log('[drb99] Installed ' + binaryName + ' for ' + platformKey);
+  } catch (err) {
+    if (urlIndex + 1 < urls.length) {
+      console.warn('[drb99] Download failed: ' + err.message + '. Trying next URL...');
+      return tryDownloadUrls(urls, destination, urlIndex + 1);
+    } else {
+      throw err;
+    }
+  }
+}
+
+async function main() {
   const target = assets[platformKey];
   if (!target) {
     const supported = Object.keys(assets).join(', ');
     fail('Unsupported platform/architecture.', 'Detected ' + platformKey + '. Supported: ' + supported);
   }
 
+  if (!target.urls || target.urls.length === 0) {
+    fail('No asset URLs configured for this platform.', platformKey);
+  }
+
   ensureDir(targetDir);
   const outputName = process.platform === 'win32' ? binaryName + '.exe' : binaryName;
   const outputPath = path.join(targetDir, outputName);
-  download(target.url, outputPath);
+
+  try {
+    await tryDownloadUrls(target.urls, outputPath);
+  } catch (err) {
+    fail('Unable to install binary.', err.message);
+  }
 }
 
 main();
@@ -354,7 +385,7 @@ if (!fs.existsSync(binaryPath)) {
   process.exit(1);
 }
 
-const child = 1spawn(binaryPath, process.argv.slice(2), { stdio: 'inherit' });
+const child = 1pawn(binaryPath, process.argv.slice(2), { stdio: 'inherit' });
 
 child.on('error', (err) => {
   console.error('[drb99] Failed to start binary:', err.message);

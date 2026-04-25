@@ -70,7 +70,7 @@ func (s *Service) Prefill(ctx context.Context, req PrefillRequest) (PrefillRespo
 		Author:      owner,
 		Description: strings.TrimSpace(repository.Description),
 		License:     preferredLicenseName(repository.License),
-		AssetURLs:   map[string]string{},
+		AssetURLs:   map[string][]string{},
 	}
 
 	if strings.TrimSpace(repository.Owner.Login) != "" {
@@ -93,7 +93,7 @@ func (s *Service) Prefill(ctx context.Context, req PrefillRequest) (PrefillRespo
 			continue
 		}
 		resp.Assets = append(resp.Assets, ReleaseAsset{Name: assetName, URL: assetURL})
-		resp.AssetURLs[assetName] = assetURL
+		resp.AssetURLs[assetName] = append(resp.AssetURLs[assetName], assetURL)
 	}
 
 	if len(resp.AssetURLs) == 0 {
@@ -246,7 +246,7 @@ func validateNPMPackageName(name string) error {
 	return nil
 }
 
-func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, version string, assets []PlatformAsset, manualURL map[string]string) ([]PlatformAsset, error) {
+func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, version string, assets []PlatformAsset, manualURLs map[string][]string) ([]PlatformAsset, error) {
 	resolved := make([]PlatformAsset, len(assets))
 	copy(resolved, assets)
 
@@ -256,17 +256,26 @@ func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, version 
 
 		switch mode {
 		case "manual":
-			if len(manualURL) == 0 {
+			if len(manualURLs) == 0 {
 				return nil, fmt.Errorf("asset urls is required in manual mode")
 			}
-			url := strings.TrimSpace(manualURL[platform])
-			if url == "" {
-				url = strings.TrimSpace(manualURL[resolved[i].NodeKey])
+			urls := manualURLs[platform]
+			if len(urls) == 0 {
+				urls = manualURLs[resolved[i].NodeKey]
 			}
-			if url == "" {
+			if len(urls) == 0 {
 				return nil, fmt.Errorf("missing manual asset URL for platform %s", platform)
 			}
-			resolved[i].URL = url
+			trimmedURLs := make([]string, 0, len(urls))
+			for _, u := range urls {
+				if trimmed := strings.TrimSpace(u); trimmed != "" {
+					trimmedURLs = append(trimmedURLs, trimmed)
+				}
+			}
+			if len(trimmedURLs) == 0 {
+				return nil, fmt.Errorf("missing manual asset URL for platform %s", platform)
+			}
+			resolved[i].URLs = trimmedURLs
 		case "auto":
 			url := gh.BuildReleaseAssetURL(owner, repo, version, binaryFile)
 			exists, err := s.gh.AssetExistByUrl(ctx, url)
@@ -276,7 +285,7 @@ func (s *Service) resolveAssets(ctx context.Context, mode, owner, repo, version 
 			if !exists {
 				return nil, fmt.Errorf("missing release asset for %s (%s)", platform, binaryFile)
 			}
-			resolved[i].URL = url
+			resolved[i].URLs = []string{url}
 		default:
 			return nil, fmt.Errorf("unsupported mode: %s", mode)
 		}

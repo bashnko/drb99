@@ -19,7 +19,7 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/bashnko/drb99/cmd.Version={{.Version}}
+      - -X github.com/h3yng/drb99/cmd.Version={{.Version}}
 
 archives:
   - id: drb99
@@ -44,7 +44,7 @@ changelog:
 
 release:
   github:
-    owner: bashnko
+    owner: h3yng
     name: drb99
   name_template: "DRB99 {{ .Version }}"
   draft: false

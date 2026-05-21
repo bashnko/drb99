@@ -6,12 +6,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/bashnko/drb99/generator"
-	gh "github.com/bashnko/drb99/github"
-	"github.com/bashnko/drb99/handler"
-	"github.com/bashnko/drb99/internal/config"
-	"github.com/bashnko/drb99/internal/middleware"
-	service "github.com/bashnko/drb99/services"
+	"github.com/h3yng/drb99/generator"
+	gh "github.com/h3yng/drb99/github"
+	"github.com/h3yng/drb99/handler"
+	"github.com/h3yng/drb99/internal/config"
+	"github.com/h3yng/drb99/internal/middleware"
+	service "github.com/h3yng/drb99/services"
 )
 
 func main() {

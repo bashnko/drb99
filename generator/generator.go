@@ -1,7 +1,7 @@
 package generator
 
 import (
-	service "github.com/bashnko/drb99/services"
+	service "github.com/h3yng/drb99/services"
 )
 
 type Generator struct{}

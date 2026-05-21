@@ -1,6 +1,6 @@
 package generator
 
-import service "github.com/bashnko/drb99/services"
+import service "github.com/h3yng/drb99/services"
 
 func (g *Generator) generateGoReleaser(cfg service.WrapperConfig) (map[string]string, error) {
 	goreleaserYAML, err := renderTemplate(goreleaserTemplate, cfg)

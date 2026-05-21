@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	gh "github.com/bashnko/drb99/github"
-	"github.com/bashnko/drb99/utils"
+	gh "github.com/h3yng/drb99/github"
+	"github.com/h3yng/drb99/utils"
 )
 
 type Generator interface {

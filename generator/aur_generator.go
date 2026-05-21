@@ -1,9 +1,9 @@
 package generator
 
 import (
-	"strings"
+  "strings"
 
-	service "github.com/bashnko/drb99/services"
+  service "github.com/h3yng/drb99/services"
 )
 
 func (g *Generator) generateAUR(cfg service.WrapperConfig) (map[string]string, error) {

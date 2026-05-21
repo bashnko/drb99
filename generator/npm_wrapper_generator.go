@@ -1,9 +1,9 @@
 package generator
 
 import (
-	"encoding/json"
+  "encoding/json"
 
-	service "github.com/bashnko/drb99/services"
+  service "github.com/h3yng/drb99/services"
 )
 
 func (g *Generator) generateNPMWrapper(cfg service.WrapperConfig) (map[string]string, error) {
@@ -344,7 +344,7 @@ if (!fs.existsSync(binaryPath)) {
   process.exit(1);
 }
 
-const child = 1pawn(binaryPath, process.argv.slice(2), { stdio: 'inherit' });
+const child = spawn(binaryPath, process.argv.slice(2), { stdio: 'inherit' });
 
 child.on('error', (err) => {
   console.error('[drb99] Failed to start binary:', err.message);

@@ -3,8 +3,8 @@
   <p>Distribute your go code, painlessly! via multiple distribution channels.</p>
 
   <p>
-    <a href="https://github.com/bashnko/drb99/blob/main/LICENSE">
-      <img src="https://img.shields.io/github/license/bashnko/drb99?style=flat" alt="License" />
+    <a href="https://github.com/h3yng/drb99/blob/main/LICENSE">
+      <img src="https://img.shields.io/github/license/h3yng/drb99?style=flat" alt="License" />
     </a>
   </p>
 

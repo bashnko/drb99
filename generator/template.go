@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"text/template"
 
-	service "github.com/bashnko/drb99/services"
+	service "github.com/h3yng/drb99/services"
 )
 
 func renderTemplate(raw string, cfg service.WrapperConfig) (string, error) {

@@ -50,5 +50,15 @@ func (g *Generator) Generate(cfg service.WrapperConfig) (map[string]string, erro
 		}
 	}
 
+	if cfg.Features.NixFlake {
+		nixFlakeFiles, err := g.generateNixFlake(cfg)
+		if err != nil {
+			return nil, err
+		}
+		for name, content := range nixFlakeFiles {
+			files[name] = content
+		}
+	}
+
 	return files, nil
 }

@@ -19,6 +19,7 @@ It can generate:
 - npm wrapper files (`package.json`, `install.js`, `index.js`, `README.md`)
 - optional `.goreleaser.yaml`
 - optional `.github/workflows/release.yml`
+- optional `flake.nix`
 
 The API returns file contents in JSON, so clients can save them directly to disk.
 

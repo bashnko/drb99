@@ -362,7 +362,7 @@ func normalizedFeatures(features *Features) Features {
 }
 
 func (f Features) isEmpty() bool {
-	return !f.NPMWrapper && !f.GoReleaser && !f.GithubActions && !f.AUR
+	return !f.NPMWrapper && !f.GoReleaser && !f.GithubActions && !f.AUR && !f.NixFlake
 }
 
 func archiveTypeForPlatform(_ Features, platform string) string {

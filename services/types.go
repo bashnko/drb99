@@ -18,6 +18,7 @@ type Features struct {
 	GoReleaser    bool `json:"goreleaser"`
 	GithubActions bool `json:"github_actions"`
 	AUR           bool `json:"aur"`
+	NixFlake      bool `json:"nix_flake"`
 }
 type WrapperConfig struct {
 	RepoURL           string

@@ -1,0 +1,59 @@
+name: Format code
+
+on:
+  push:
+    branches: ['main', 'dev']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    name: Check gofmt
+    # skip the check on manual dispatch — the format job handles it
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'   # respects your module's Go version
+
+      - name: Check formatting
+        run: |
+          unformatted=$(gofmt -s -l .)
+          if [ -n "$unformatted" ]; then
+            echo "$unformatted"
+            exit 1
+          fi
+
+  format:
+    name: Apply gofmt (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Run gofmt and push changes
+        run: |
+          gofmt -s -w .
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "chore: run gofmt"
+            git push
+          else
+            echo "No formatting changes necessary."
+          fi

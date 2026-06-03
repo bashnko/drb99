@@ -143,7 +143,6 @@ func (c *Client) AssetExistByUrl(ctx context.Context, assetURL string) (bool, er
 		return true, nil
 	}
 	return false, fmt.Errorf("unexpected status while validating asset: %d", resp.StatusCode)
-
 }
 
 func BuildReleaseAssetURL(owner, repo, version, fileName string) string {

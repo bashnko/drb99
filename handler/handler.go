@@ -58,7 +58,6 @@ func (h *Handler) handleGenerate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, resp)
-
 }
 
 func (h *Handler) handlePrefill(w http.ResponseWriter, r *http.Request) {

@@ -21,7 +21,6 @@ func ParseGithubRepo(repoURL string) (owner string, repo string, err error) {
 		return "", "", fmt.Errorf("invalid repo url: expected format https://github.com/{owner}/{repo}")
 	}
 	return parts[0], parts[1], nil
-
 }
 
 func EnsureVersionPrefix(version string) string {

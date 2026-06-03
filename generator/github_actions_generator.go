@@ -1,9 +1,9 @@
 package generator
 
 import (
-  "strings"
+	"strings"
 
-  service "github.com/h3yng/drb99/services"
+	service "github.com/h3yng/drb99/services"
 )
 
 func (g *Generator) generateGithubActions(_ service.WrapperConfig) map[string]string {

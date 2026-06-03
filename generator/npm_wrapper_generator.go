@@ -1,10 +1,10 @@
 package generator
 
 import (
-  "encoding/json"
-  "strings"
+	"encoding/json"
+	"strings"
 
-  service "github.com/h3yng/drb99/services"
+	service "github.com/h3yng/drb99/services"
 )
 
 func (g *Generator) generateNPMWrapper(cfg service.WrapperConfig) (map[string]string, error) {
@@ -28,13 +28,13 @@ func (g *Generator) generateNPMWrapper(cfg service.WrapperConfig) (map[string]st
 		return nil, err
 	}
 
-  return map[string]string{
-    "package.json":                      packageJSON,
-    "install.js":                        installJS,
-    "index.js":                          indexJS,
-    "README.md":                         readme,
-    ".github/workflows/npm-release.yml": strings.ReplaceAll(npmReleaseTemplate, "__NPM_TOKEN__", "${{ secrets.NPM_TOKEN }}"),
-  }, nil
+	return map[string]string{
+		"package.json":                      packageJSON,
+		"install.js":                        installJS,
+		"index.js":                          indexJS,
+		"README.md":                         readme,
+		".github/workflows/npm-release.yml": strings.ReplaceAll(npmReleaseTemplate, "__NPM_TOKEN__", "${{ secrets.NPM_TOKEN }}"),
+	}, nil
 }
 
 func (g *Generator) renderPackageJSON(cfg service.WrapperConfig) (string, error) {
@@ -392,7 +392,8 @@ npm wrapper for **{{ .BinaryName }}** from [{{ .RepoURL }}]({{ .RepoURL }}).
 - Repository: {{ .RepoURL }}
 `
 
-const npmReleaseTemplate = `name: npm-release
+const npmReleaseTemplate = `
+name: npm-release
 
 on:
   release:
@@ -407,6 +408,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -420,7 +422,16 @@ jobs:
       - name: Verify package manifest
         run: test -f package.json
 
-      - name: Publish package
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build --if-present
+
+      - name: Run tests
+        run: npm test --if-present
+
+      - name: Publish to npm
         run: npm publish --access public --provenance
         env:
           NODE_AUTH_TOKEN: __NPM_TOKEN__

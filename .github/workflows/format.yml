@@ -10,9 +10,38 @@ permissions:
   contents: write
 
 jobs:
+  format:
+    name: Format with gofumpt
+    if: github.event_name != 'pull_request' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+          cache: false
+
+      - name: Apply formatting and push changes
+        run: |
+          go install mvdan.cc/gofumpt@v0.10.0
+          gofumpt -w .
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No formatting changes necessary."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: format code"
+          git push
+
   check:
     name: Check gofumpt
-    if: github.event_name != 'workflow_dispatch'
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,33 +59,4 @@ jobs:
           if [ -n "$unformatted" ]; then
             echo "$unformatted"
             exit 1
-          fi
-
-  format:
-    name: Apply gofumpt (manual)
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: true
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
-          cache: false
-
-      - name: Run gofumpt and push changes
-        run: |
-          go install mvdan.cc/gofumpt@v0.10.0
-          gofumpt -w .
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          if [ -n "$(git status --porcelain)" ]; then
-            git add -A
-            git commit -m "chore: run gofumpt"
-            git push
-          else
-            echo "No formatting changes necessary."
           fi

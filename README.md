@@ -11,6 +11,8 @@
 </div>
 
 ---
+> [!CAUTION]  
+> README is outdated, to be updated ASAP!
 
 drb99  is an HTTP API that generates distribution files for Go CLI projects.
 

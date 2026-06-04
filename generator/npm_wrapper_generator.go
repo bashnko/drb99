@@ -28,11 +28,17 @@ func (g *Generator) generateNPMWrapper(cfg service.WrapperConfig) (map[string]st
 		return nil, err
 	}
 
+	gitignore, err := renderTemplate(gitignoreTemplate, cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	return map[string]string{
 		"package.json":                      packageJSON,
 		"install.js":                        installJS,
 		"index.js":                          indexJS,
 		"README.md":                         readme,
+		".gitignore":                        gitignore,
 		".github/workflows/npm-release.yml": strings.ReplaceAll(npmReleaseTemplate, "__NPM_TOKEN__", "${{ secrets.NPM_TOKEN }}"),
 	}, nil
 }
@@ -390,6 +396,11 @@ npm wrapper for **{{ .BinaryName }}** from [{{ .RepoURL }}]({{ .RepoURL }}).
 
 - Version: {{ .Version }}
 - Repository: {{ .RepoURL }}
+`
+
+const gitignoreTemplate = `node_modules/
+.npmrc
+bin/
 `
 
 const npmReleaseTemplate = `

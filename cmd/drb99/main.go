@@ -6,38 +6,36 @@ import (
 	"os"
 	"time"
 
-	"github.com/h3yng/drb99/generator"
-	gh "github.com/h3yng/drb99/github"
-	"github.com/h3yng/drb99/handler"
-	"github.com/h3yng/drb99/internal/config"
-	"github.com/h3yng/drb99/internal/middleware"
-	service "github.com/h3yng/drb99/services"
+	"github.com/h3yng/drb99/internal/server"
 )
 
 func main() {
-	config.LoadDotEnv()
-
-	addr := os.Getenv("DRB99")
+	addr := listenAddrFromEnv("PORT")
+	if addr == "" {
+		addr = listenAddrFromEnv("DRB99")
+	}
 	if addr == "" {
 		addr = ":8088"
 	}
 
-	ghClient := gh.NewClient()
-	gen := generator.New()
-	svc := service.New(ghClient, gen)
-	h := handler.New(svc)
-
-	mux := http.NewServeMux()
-	h.Register(mux)
-	corsConfig := middleware.LoadCORSConfig()
-
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           middleware.CORSMiddleware(corsConfig, mux),
+		Handler:           server.New(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	log.Printf("drb99 listening on %s", addr)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
+}
+
+func listenAddrFromEnv(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return ""
+	}
+	if value[0] == ':' {
+		return value
+	}
+	return ":" + value
 }

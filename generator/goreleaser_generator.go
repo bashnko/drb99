@@ -9,7 +9,7 @@ func (g *Generator) generateGoReleaser(cfg service.WrapperConfig) (map[string]st
 	}
 
 	return map[string]string{
-		".goreleaser.yaml": goreleaserYAML,
+		".goreleaser.yml": goreleaserYAML,
 	}, nil
 }
 
@@ -22,7 +22,8 @@ before:
     - go mod tidy
 
 builds:
-  - id: default
+  - id: {{ .BinaryName }}
+	main: ./cmd/{{ .BinaryName }}/main.go # replace this path with your main.go
     binary: {{ .BinaryName }}
     env:
       - CGO_ENABLED=0
@@ -58,6 +59,14 @@ changelog:
       - '^docs:'
       - '^test:'
       - '^tests:'
+      - '^chore:'
       - '^ci:'
       - '\\bdocs?\\b'
+
+release:
+	github:
+		owner: {{ .Owner }}
+		name: {{ .BinaryName }}
+	draft: false
+	prerelease: auto
 `

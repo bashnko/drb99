@@ -19,6 +19,7 @@ type Features struct {
 	GithubActions bool `json:"github_actions"`
 	AUR           bool `json:"aur"`
 	NixFlake      bool `json:"nix_flake"`
+	Dockerfile    bool `json:"dockerfile"`
 }
 type WrapperConfig struct {
 	RepoURL           string

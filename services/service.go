@@ -122,6 +122,7 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 	license := strings.TrimSpace(req.License)
 	description := strings.TrimSpace(req.Description)
 	binaryName := strings.TrimSpace(req.BinaryName)
+	runtimeImage := strings.TrimSpace(req.RuntimeImage)
 	if features.NPMWrapper {
 		if packageName == "" {
 			return WrapperConfig{}, fmt.Errorf("package name is required when npm wrapper is enabled")
@@ -136,6 +137,13 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 			description = fmt.Sprintf("npm wrapper for %s", binaryName)
 		}
 	}
+
+	if features.DockerContainer {
+		if runtimeImage == "" {
+			runtimeImage = "golang:latest"
+		}
+	}
+
 	if features.AUR {
 		if license == "" {
 			license = "MIT"
@@ -226,6 +234,7 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 		Features:          features,
 		Platforms:         assets,
 		GoReleaserTargets: goReleaserTargets,
+		RuntimeImage:      runtimeImage,
 	}, nil
 }
 
@@ -362,7 +371,7 @@ func normalizedFeatures(features *Features) Features {
 }
 
 func (f Features) isEmpty() bool {
-	return !f.NPMWrapper && !f.GoReleaser && !f.GithubActions && !f.AUR && !f.NixFlake
+	return !f.NPMWrapper && !f.GoReleaser && !f.GithubActions && !f.AUR && !f.NixFlake && !f.DockerContainer
 }
 
 func archiveTypeForPlatform(_ Features, platform string) string {

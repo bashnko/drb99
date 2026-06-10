@@ -23,7 +23,15 @@ func (g *Generator) generateDockerContainer(cfg service.WrapperConfig) (map[stri
 
 const dockerfileTemplate = `# This Dockerfile was generated using drb99
 # https://github.com/h3yng/drb99.git
-From 
+From  {{ .RuntimeImage}} 
+
+WORKDIR /app
+
+COPY . .
+
+RUN go build -o {{ .BinaryName }}
+CMD [ "./{{ .BinaryName }}" ]
+
 `
 
 const gitignoreFileTemplate = `ignore paths`

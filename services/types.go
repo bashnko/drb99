@@ -1,25 +1,26 @@
 package service
 
 type GenerateRequest struct {
-	RepoURL     string              `json:"repo_url"`
-	BinaryName  string              `json:"binary_name"`
-	PackageName string              `json:"package_name,omitempty"`
-	License     string              `json:"license,omitempty"`
-	Description string              `json:"description,omitempty"`
-	Version     string              `json:"version,omitempty"`
-	Platforms   []string            `json:"platforms"`
-	Mode        string              `json:"mode"`
-	Features    *Features           `json:"features,omitempty"`
-	AssetURLs   map[string][]string `json:"asset_urls,omitempty"`
+	RepoURL      string              `json:"repo_url"`
+	BinaryName   string              `json:"binary_name"`
+	PackageName  string              `json:"package_name,omitempty"`
+	License      string              `json:"license,omitempty"`
+	Description  string              `json:"description,omitempty"`
+	Version      string              `json:"version,omitempty"`
+	Platforms    []string            `json:"platforms"`
+	Mode         string              `json:"mode"`
+	Features     *Features           `json:"features,omitempty"`
+	AssetURLs    map[string][]string `json:"asset_urls,omitempty"`
+	RuntimeImage string              `json:"runtime_image"`
 }
 
 type Features struct {
-	NPMWrapper    bool `json:"npm_wrapper"`
-	GoReleaser    bool `json:"goreleaser"`
-	GithubActions bool `json:"github_actions"`
-	AUR           bool `json:"aur"`
-	NixFlake      bool `json:"nix_flake"`
-	Dockerfile    bool `json:"dockerfile"`
+	NPMWrapper      bool `json:"npm_wrapper"`
+	GoReleaser      bool `json:"goreleaser"`
+	GithubActions   bool `json:"github_actions"`
+	AUR             bool `json:"aur"`
+	NixFlake        bool `json:"nix_flake"`
+	DockerContainer bool `json:"docker_container"`
 }
 type WrapperConfig struct {
 	RepoURL           string
@@ -36,7 +37,15 @@ type WrapperConfig struct {
 	Features          Features
 	Platforms         []PlatformAsset
 	GoReleaserTargets []string
+	MainPath          string
+	RuntimeImage      string
 }
+
+// type DockerRuntime struct {
+// 	Golang     string
+// 	JavaScript string
+// 	TypeScript string
+// }
 
 type PlatformAsset struct {
 	NodeKey    string

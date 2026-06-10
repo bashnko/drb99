@@ -60,8 +60,8 @@ func (g *Generator) Generate(cfg service.WrapperConfig) (map[string]string, erro
 		}
 	}
 
-	if cfg.Features.Dockerfile {
-		dockerFiles, err := g.generateDockerfile(cfg)
+	if cfg.Features.DockerContainer {
+		dockerFiles, err := g.generateDockerContainer(cfg)
 		if err != nil {
 			return nil, err
 		}

@@ -4,7 +4,7 @@ import (
 	service "github.com/h3yng/drb99/services"
 )
 
-func (g *Generator) generateDockerfile(cfg service.WrapperConfig) (map[string]string, error) {
+func (g *Generator) generateDockerContainer(cfg service.WrapperConfig) (map[string]string, error) {
 	dockerfile, err := renderTemplate(dockerfileTemplate, cfg)
 	if err != nil {
 		return nil, err

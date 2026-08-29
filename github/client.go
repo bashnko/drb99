@@ -162,7 +162,7 @@ func (c *Client) GetAssetDigest(ctx context.Context, owner, repo, tag, assetName
 	}
 	for _, asset := range release.Assets {
 		if asset.Name == assetName {
-			if after, ok :=strings.CutPrefix(asset.Digest, "sha256:"); ok  {
+			if after, ok := strings.CutPrefix(asset.Digest, "sha256:"); ok {
 				return after, nil
 			}
 			return asset.Digest, nil

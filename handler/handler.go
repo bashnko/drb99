@@ -3,8 +3,10 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/h3yng/drb99/cmd"
 	service "github.com/h3yng/drb99/services"
 )
 
@@ -19,6 +21,7 @@ const (
 	generate         = apiVersionPrefix + "/generate"
 	health           = apiVersionPrefix + "/health"
 	prefill          = apiVersionPrefix + "/prefill"
+	version          = apiVersionPrefix + "/version"
 )
 
 func New(svc *service.Service) *Handler {
@@ -31,6 +34,7 @@ func (h *Handler) Register(mux *http.ServeMux) {
 	mux.HandleFunc(legacyGenerate, h.handleGenerate)
 	mux.HandleFunc(legactyHealth, h.handleHealth)
 	mux.HandleFunc(prefill, h.handlePrefill)
+	mux.HandleFunc(version, h.handleVersion)
 }
 
 func (h *Handler) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -48,10 +52,15 @@ func (h *Handler) handleGenerate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	resp, err := h.svc.Generate(r.Context(), req)
 	if err != nil {
 		code := http.StatusBadRequest
-		if err == context.Canceled || err == context.DeadlineExceeded {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			code = http.StatusRequestTimeout
 		}
 		writeError(w, code, err.Error())
@@ -72,10 +81,15 @@ func (h *Handler) handlePrefill(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	resp, err := h.svc.Prefill(r.Context(), req)
 	if err != nil {
 		code := http.StatusBadRequest
-		if err == context.Canceled || err == context.DeadlineExceeded {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			code = http.StatusRequestTimeout
 		}
 		writeError(w, code, err.Error())
@@ -93,4 +107,15 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func (h *Handler) handleVersion(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{
+		"version": cmd.Version,
+		"api":     "v1",
+	})
 }

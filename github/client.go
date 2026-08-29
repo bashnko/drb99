@@ -109,7 +109,7 @@ func (c *Client) fetchRelease(ctx context.Context, endpoint string) (Release, er
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "drb99/1.0")
-resp, err := c.httpClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return Release{}, err
 	}
@@ -132,7 +132,7 @@ func (c *Client) AssetExistByUrl(ctx context.Context, assetURL string) (bool, er
 		return false, err
 	}
 	req.Header.Set("User-Agent", "drb99/1.0")
-resp, err := c.httpClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return false, err
 	}

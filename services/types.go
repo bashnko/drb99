@@ -10,7 +10,7 @@ type GenerateRequest struct {
 	Platforms    []string            `json:"platforms" validate:"omitempty,dive,platform"`
 	Mode         string              `json:"mode" validate:"omitempty,oneof=auto manual"`
 	Features     *Features           `json:"features,omitempty"`
-	AssetURLs    map[string][]string `json:"asset_urls,omitempty" validate:"omitempty,dive,keys,url"`
+	AssetURLs    map[string][]string `json:"asset_urls,omitempty"`
 	RuntimeImage string              `json:"runtime_image" validate:"omitempty,min=1"`
 }
 

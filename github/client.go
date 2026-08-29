@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"path"
@@ -23,8 +24,11 @@ func (e APIError) Error() string {
 }
 
 func IsNotFound(err error) bool {
-	apiErr, ok := err.(APIError)
-	return ok && apiErr.StatusCode == http.StatusNotFound
+	var apiErr APIError
+	if errors.As(err, &apiErr) {
+		return apiErr.StatusCode == http.StatusNotFound
+	}
+	return false
 }
 
 type Client struct {
@@ -87,7 +91,7 @@ func (c *Client) Repository(ctx context.Context, owner, repo string) (Repository
 		return Repository{}, err
 	}
 
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return Repository{}, APIError{StatusCode: resp.StatusCode}
 	}
@@ -105,12 +109,12 @@ func (c *Client) fetchRelease(ctx context.Context, endpoint string) (Release, er
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "drb99/1.0")
-
-	resp, err := c.httpClient.Do(req)
+resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return Release{}, err
 	}
-	defer resp.Body.Close()
+
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return Release{}, APIError{StatusCode: resp.StatusCode}
@@ -128,12 +132,12 @@ func (c *Client) AssetExistByUrl(ctx context.Context, assetURL string) (bool, er
 		return false, err
 	}
 	req.Header.Set("User-Agent", "drb99/1.0")
-
-	resp, err := c.httpClient.Do(req)
+resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
+
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return false, nil

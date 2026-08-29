@@ -24,8 +24,7 @@ func (e APIError) Error() string {
 }
 
 func IsNotFound(err error) bool {
-	var apiErr APIError
-	if errors.As(err, &apiErr) {
+	if apiErr, ok := errors.AsType[APIError](err); ok {
 		return apiErr.StatusCode == http.StatusNotFound
 	}
 	return false
@@ -57,8 +56,9 @@ type License struct {
 }
 
 type ReleasAssets struct {
-	Name string `json:"name"`
-	URL  string `json:"browser_download_url"`
+	Name   string `json:"name"`
+	URL    string `json:"browser_download_url"`
+	Digest string `json:"digest"`
 }
 
 func NewClient() *Client {
@@ -153,4 +153,20 @@ func BuildReleaseAssetURL(owner, repo, version, fileName string) string {
 	clean := path.Clean(fileName)
 	clean = strings.TrimPrefix(clean, "/")
 	return fmt.Sprintf("https://github.com/%s/%s/releases/download/%s/%s", owner, repo, version, clean)
+}
+
+func (c *Client) GetAssetDigest(ctx context.Context, owner, repo, tag, assetName string) (string, error) {
+	release, err := c.ReleaseByTag(ctx, owner, repo, tag)
+	if err != nil {
+		return "", err
+	}
+	for _, asset := range release.Assets {
+		if asset.Name == assetName {
+			if after, ok :=strings.CutPrefix(asset.Digest, "sha256:"); ok  {
+				return after, nil
+			}
+			return asset.Digest, nil
+		}
+	}
+	return "", fmt.Errorf("asset %s not found in release %s", assetName, tag)
 }

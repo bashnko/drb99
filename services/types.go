@@ -56,6 +56,7 @@ type PlatformAsset struct {
 	BinaryFile string
 	URLs       []string
 	Archive    string
+	SHA256     string
 }
 
 type GenerateResponse struct {

@@ -1,17 +1,17 @@
 package service
 
 type GenerateRequest struct {
-	RepoURL      string              `json:"repo_url"`
-	BinaryName   string              `json:"binary_name"`
-	PackageName  string              `json:"package_name,omitempty"`
-	License      string              `json:"license,omitempty"`
-	Description  string              `json:"description,omitempty"`
-	Version      string              `json:"version,omitempty"`
-	Platforms    []string            `json:"platforms"`
-	Mode         string              `json:"mode"`
+	RepoURL      string              `json:"repo_url" validate:"required,url"`
+	BinaryName   string              `json:"binary_name" validate:"required,min=1,max=100"`
+	PackageName  string              `json:"package_name,omitempty" validate:"omitempty,min=1,max=214"`
+	License      string              `json:"license,omitempty" validate:"omitempty,spdx"`
+	Description  string              `json:"description,omitempty" validate:"omitempty,max=500"`
+	Version      string              `json:"version,omitempty" validate:"omitempty,semver"`
+	Platforms    []string            `json:"platforms" validate:"omitempty,dive,platform"`
+	Mode         string              `json:"mode" validate:"omitempty,oneof=auto manual"`
 	Features     *Features           `json:"features,omitempty"`
-	AssetURLs    map[string][]string `json:"asset_urls,omitempty"`
-	RuntimeImage string              `json:"runtime_image"`
+	AssetURLs    map[string][]string `json:"asset_urls,omitempty" validate:"omitempty,dive,keys,url"`
+	RuntimeImage string              `json:"runtime_image" validate:"omitempty,min=1"`
 }
 
 type Features struct {
@@ -63,7 +63,7 @@ type GenerateResponse struct {
 }
 
 type PrefillRequest struct {
-	RepoURL string `json:"repo_url"`
+	RepoURL string `json:"repo_url" validate:"required,url"`
 }
 
 type PrefillResponse struct {

@@ -21,6 +21,7 @@ type Features struct {
 	AUR             bool `json:"aur"`
 	NixFlake        bool `json:"nix_flake"`
 	DockerContainer bool `json:"docker_container"`
+	Curl            bool `json:"curl"`
 }
 type WrapperConfig struct {
 	RepoURL           string

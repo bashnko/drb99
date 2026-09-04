@@ -16,6 +16,7 @@ var (
 	ErrPackageNameRequired   = errors.New("package name is required when npm wrapper is enabled")
 	ErrVersionRequired       = errors.New("version is required")
 	ErrAURVersionRequired    = errors.New("version is required when aur is enabled")
+	ErrCurlVersionRequired   = errors.New("version is required when curl is enabled")
 	ErrAssetURLsRequired     = errors.New("asset_urls is required in manual mode")
 	ErrInvalidMode           = errors.New("mode must be either auto or manual")
 	ErrInvalidAssetURL       = errors.New("invalid URL in asset_urls")
@@ -80,7 +81,7 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 	}
 
 	mode := strings.ToLower(strings.TrimSpace(req.Mode))
-	if features.NPMWrapper {
+	if features.NPMWrapper || features.Curl {
 		if mode != "auto" && mode != "manual" {
 			return WrapperConfig{}, ErrInvalidMode
 		}
@@ -90,13 +91,13 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 
 	selectedPlatforms := req.Platforms
 	if len(selectedPlatforms) == 0 {
-		if features.NPMWrapper || features.GoReleaser {
+		if features.NPMWrapper || features.GoReleaser || features.Curl {
 			selectedPlatforms = defaultPlatforms()
 		}
 	}
 
 	version := utils.EnsureVersionPrefix(strings.TrimSpace(req.Version))
-	if features.NPMWrapper && mode == "auto" && version == "" {
+	if (features.NPMWrapper || features.Curl) && mode == "auto" && version == "" {
 		release, err := s.gh.LatestRelease(ctx, owner, repo)
 		if err != nil {
 			return WrapperConfig{}, fmt.Errorf("%w: %v", ErrResolveReleaseVersion, err)
@@ -126,13 +127,16 @@ func (s *Service) prepareConfig(ctx context.Context, req GenerateRequest) (Wrapp
 	if features.AUR && version == "" {
 		return WrapperConfig{}, ErrAURVersionRequired
 	}
+	if features.Curl && version == "" {
+		return WrapperConfig{}, ErrCurlVersionRequired
+	}
 
 	assets, err := buildPlatformAssets(binaryName, version, selectedPlatforms, features)
 	if err != nil {
 		return WrapperConfig{}, err
 	}
 
-	if features.NPMWrapper {
+	if features.NPMWrapper || features.Curl {
 		assets, err = s.resolveAssets(ctx, mode, owner, repo, version, assets, req.AssetURLs)
 		if err != nil {
 			return WrapperConfig{}, err

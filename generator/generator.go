@@ -71,5 +71,16 @@ func (g *Generator) Generate(cfg service.WrapperConfig) (map[string]string, erro
 		}
 	}
 
+	if cfg.Features.Curl {
+		curlFiles, err := g.generateCurl(cfg)
+		if err != nil {
+			return nil, err
+		}
+
+		for name, content := range curlFiles {
+			files[name] = content
+		}
+	}
+
 	return files, nil
 }

@@ -102,8 +102,8 @@ func (f *Features) IsEmpty() bool {
 		return true
 	}
 	v := reflect.ValueOf(f).Elem()
-	for _, field := range v.Fields() {
-		if field.Bool() {
+	for i := 0; i < v.NumField(); i++ {
+		if v.Field(i).Bool() {
 			return false
 		}
 	}

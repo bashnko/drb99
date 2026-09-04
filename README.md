@@ -21,6 +21,7 @@
 | AUR | `PKGBUILD` · `aur-release.yml` |
 | Nix Flake | `flake.nix` |
 | Docker | `Dockerfile` |
+| Curl | `install.sh` |
 
 ## Architecture
 
@@ -31,7 +32,7 @@ flowchart LR
     User -->|selects channels| UI[Web UI]
     UI -->|POST /generate| API[drb99 API]
     API -->|JSON response| Files[Generated files]
-    Files --> npm & GitHub & AUR & Nix & Docker
+    Files --> npm & GitHub & AUR & Nix & Docker & Curl
 ```
 
 ## Example request

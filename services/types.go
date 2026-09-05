@@ -22,6 +22,7 @@ type Features struct {
 	NixFlake        bool `json:"nix_flake"`
 	DockerContainer bool `json:"docker_container"`
 	Curl            bool `json:"curl"`
+	Iex             bool `json:"iex"`
 }
 type WrapperConfig struct {
 	RepoURL           string

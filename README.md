@@ -22,6 +22,7 @@
 | Nix Flake | `flake.nix` |
 | Docker | `Dockerfile` |
 | Curl | `install.sh` |
+| Iex (Windows) | `install.ps1` |
 
 ## Architecture
 
@@ -32,7 +33,7 @@ flowchart LR
     User -->|selects channels| UI[Web UI]
     UI -->|POST /generate| API[drb99 API]
     API -->|JSON response| Files[Generated files]
-    Files --> npm & GitHub & AUR & Nix & Docker & Curl
+    Files --> npm & GitHub & AUR & Nix & Docker & Curl & Iex
 ```
 
 ## Example request

@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"maps"
+
 	service "github.com/h3yng/drb99/services"
 )
 
@@ -18,9 +20,7 @@ func (g *Generator) Generate(cfg service.WrapperConfig) (map[string]string, erro
 		if err != nil {
 			return nil, err
 		}
-		for name, content := range npmFiles {
-			files[name] = content
-		}
+		maps.Copy(files, npmFiles)
 	}
 
 	if cfg.Features.GoReleaser {
@@ -28,16 +28,12 @@ func (g *Generator) Generate(cfg service.WrapperConfig) (map[string]string, erro
 		if err != nil {
 			return nil, err
 		}
-		for name, content := range goreleaserFiles {
-			files[name] = content
-		}
+		maps.Copy(files, goreleaserFiles)
 	}
 
 	if cfg.Features.GithubActions {
 		githubActionsFiles := g.generateGithubActions(cfg)
-		for name, content := range githubActionsFiles {
-			files[name] = content
-		}
+		maps.Copy(files, githubActionsFiles)
 	}
 
 	if cfg.Features.AUR {
@@ -45,9 +41,7 @@ func (g *Generator) Generate(cfg service.WrapperConfig) (map[string]string, erro
 		if err != nil {
 			return nil, err
 		}
-		for name, content := range aurFiles {
-			files[name] = content
-		}
+		maps.Copy(files, aurFiles)
 	}
 
 	if cfg.Features.NixFlake {
@@ -55,9 +49,7 @@ func (g *Generator) Generate(cfg service.WrapperConfig) (map[string]string, erro
 		if err != nil {
 			return nil, err
 		}
-		for name, content := range nixFlakeFiles {
-			files[name] = content
-		}
+		maps.Copy(files, nixFlakeFiles)
 	}
 
 	if cfg.Features.DockerContainer {
@@ -66,9 +58,7 @@ func (g *Generator) Generate(cfg service.WrapperConfig) (map[string]string, erro
 			return nil, err
 		}
 
-		for name, content := range dockerFiles {
-			files[name] = content
-		}
+		maps.Copy(files, dockerFiles)
 	}
 
 	if cfg.Features.Curl {
@@ -77,9 +67,16 @@ func (g *Generator) Generate(cfg service.WrapperConfig) (map[string]string, erro
 			return nil, err
 		}
 
-		for name, content := range curlFiles {
-			files[name] = content
+		maps.Copy(files, curlFiles)
+	}
+
+	if cfg.Features.Iex {
+		iexFiles, err := g.generateIex(cfg)
+		if err != nil {
+			return nil, err
 		}
+
+		maps.Copy(files, iexFiles)
 	}
 
 	return files, nil
